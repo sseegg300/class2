@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>디폼블록 디자인</title>
+<style>
+  :root{
+    --grid-cols: 25;
+    --grid-rows: 25;
+    --cell-size: 26px;
+    --gap: 6px;
+    --radius: 0px;
+    --panel: rgba(255,255,255,.65);
+    --ink: #0f3d56;
+    --brand: #4aa3df;
+    --shadow: 0 6px 18px rgba(17,64,98,.14);
+    --shadow-strong: 0 10px 28px rgba(17,64,98,.2);
+  }
+  *{ box-sizing: border-box; }
+  html, body{ height:100%; }
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    color: var(--ink);
+    background: radial-gradient(1200px 600px at 20% 10%, #dff0ff 0, #cfe6fb 40%, #bcd9f3 100%) fixed;
+    overflow:hidden;
+  }
+
+  main{
+    height: 100vh;
+    display:flex; align-items:stretch; justify-content:center;
+    padding: 0 10px;
+  }
+  .board{
+    width:100%; max-width: 1900px;
+    height:100%;
+    margin:0 auto;
+    background: linear-gradient(180deg, rgba(255,255,255,.86), rgba(255,255,255,.6));
+    border: 1px solid rgba(255,255,255,.85);
+    box-shadow: var(--shadow-strong);
+    border-radius: 12px;
+    padding: 8px 10px 10px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+
+  .titleRow{ display:flex; justify-content:center; align-items:center; }
+  .title{
+    font-weight: 800; letter-spacing:.2px; color:#0f3d56;
+    font-size: clamp(18px, 2.2vw, 28px);
+    padding: 6px 12px;
+    background: rgba(255,255,255,.9);
+    border: 1px solid rgba(208,230,255,.9);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    user-select: none;
+  }
+
+  .menuRow{
+    display:flex; align-items:center; flex-wrap:wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  .group{
+    display:flex; gap:8px; align-items:center;
+    background: var(--panel);
+    padding:6px 8px; border-radius: 10px; box-shadow: var(--shadow);
+  }
+  .label{ font-size: 12px; opacity:.8; margin-right: 2px; }
+  .btn{
+    appearance: none; border:0; padding: 8px 10px;
+    background: linear-gradient(180deg,#fff,#f1f7ff);
+    color: var(--ink); font-weight:700; border-radius: 10px;
+    box-shadow: 0 1px 0 rgba(255,255,255,.8), 0 6px 14px rgba(17,64,98,.12);
+    cursor: pointer; transition: transform .06s ease, box-shadow .2s ease, opacity .2s;
+    font-size: 13px;
+  }
+  .btn:active{ transform: translateY(1px); box-shadow: 0 4px 12px rgba(17,64,98,.18) }
+  .btn.primary{ background: linear-gradient(180deg,#5bb6f1,#3f9bdd); color:#fff; }
+  .btn.ghost{ background: linear-gradient(180deg,#fff, #f6fbff); }
+  .toggle[data-on="true"]{ background: linear-gradient(180deg,#ff9fb0,#ff6b7d); color:#fff; }
+  .chip{
+    border:0; padding:8px 12px; border-radius: 999px;
+    background:#fff; box-shadow: var(--shadow); cursor:pointer; font-weight:700; font-size:13px;
+  }
+
+  input[type="color"]{
+    appearance: none; border: none; width: 36px; height: 36px;
+    border-radius: 8px; overflow: hidden; cursor: pointer;
+    box-shadow: var(--shadow); background: #fff; padding:0;
+  }
+  input[type="range"]{ accent-color: var(--brand); height: 6px; }
+
+  /* 최근 색 팔레트 */
+  .swatches{ display:flex; gap:6px; align-items:center; }
+  .swatch{
+    width: 24px; height: 24px; border-radius: 6px;
+    border: 1px solid rgba(208,230,255,.9);
+    box-shadow: 0 1px 0 rgba(255,255,255,.8), 0 6px 14px rgba(17,64,98,.12);
+    cursor: pointer; position: relative;
+  }
+  .swatch[data-current="true"]::after{
+    content:''; position:absolute; inset:-3px;
+    border:2px solid #3f9bdd; border-radius:8px; pointer-events:none;
+  }
+
+  .zoomWrap{
+    display:flex; flex-direction:column; align-items:flex-end; gap:4px;
+    margin-left: 4px;
+  }
+  .signature{
+    font-size:12px; line-height:1; padding:4px 8px;
+    color: var(--ink); font-weight:700; letter-spacing:.2px;
+    background: rgba(255,255,255,.9);
+    border: 1px solid rgba(208,230,255,.9);
+    border-radius: 999px; box-shadow: var(--shadow); user-select:none;
+  }
+
+  .gridBox{
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 120px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .grid{
+    user-select: none;
+    display: grid;
+    grid-template-columns: repeat(var(--grid-cols), var(--cell-size));
+    grid-template-rows: repeat(var(--grid-rows), var(--cell-size));
+    gap: var(--gap);
+    justify-content: center;
+    padding: 8px;
+    background: linear-gradient(180deg,#e7f3ff,#d9ecff);
+    border-radius: 0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+    touch-action: none;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  .pixel{
+    appearance: none; border:0; padding:0; margin:0;
+    width: var(--cell-size); height: var(--cell-size);
+    background: #ffffffee;
+    border-radius: var(--radius);
+    box-shadow:
+      inset 0 0 0 1px rgba(140,180,210,.55),
+      0 2px 0 rgba(255,255,255,.8),
+      0 4px 10px rgba(15,61,86,.12);
+    transition: transform .04s ease, box-shadow .12s ease, background .12s linear;
+    cursor: crosshair;
+  }
+  .pixel:hover{ transform: translateY(.4px) scale(.985); }
+  .pixel.filled{
+    box-shadow:
+      inset 0 0 0 1px rgba(0,0,0,.06),
+      0 2px 0 rgba(255,255,255,.6),
+      0 6px 14px rgba(15,61,86,.18);
+  }
+  .pixel:focus-visible{
+    outline: 3px solid rgba(74,163,223,.55);
+    outline-offset: 2px;
+  }
+
+  footer{ text-align:center; font-size: 11px; opacity:.7; }
+  .kbd{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        background: #eef6ff; border: 1px solid #d0e6ff; padding:1px 5px; border-radius:6px; }
+</style>
+</head>
+<body>
+  <main>
+    <section class="board">
+      <div class="titleRow"><div class="title">디폼블록 디자인</div></div>
+
+      <!-- 메뉴줄(가운데 정렬) -->
+      <div class="menuRow" aria-label="상단 메뉴">
+        <div class="group">
+          <span class="label">색</span>
+          <input id="color" type="color" value="#4aa3df" title="현재 붓 색" />
+        </div>
+
+        <!-- 최근색 팔레트 -->
+        <div class="group">
+          <span class="label">최근색</span>
+          <div id="swatches" class="swatches" role="listbox" aria-label="최근 선택 색"></div>
+          <button id="addSwatch" class="chip" title="현재 색 팔레트에 추가">＋</button>
+        </div>
+
+        <div class="group">
+          <button id="undo" class="btn ghost" title="되돌리기 (Ctrl+Z)">되돌리기</button>
+          <button id="eraser" class="btn toggle" data-on="false" title="E: 지우개 토글">지우개: <span class="mono" id="eraserState">OFF</span></button>
+          <button id="clear" class="btn ghost" title="전체 초기화">초기화</button>
+          <button id="save" class="btn primary" title="PNG로 저장">이미지 저장</button>
+          <button id="load" class="btn ghost" title="PNG 불러오기">불러오기</button>
+          <input id="fileInput" type="file" accept="image/png,image/*" style="display:none" />
+        </div>
+
+        <!-- 프리셋 칩 -->
+        <div class="group">
+          <button class="chip" data-preset="16x16">16×16</button>
+          <button class="chip" data-preset="25x25">25×25</button>
+          <button class="chip" data-preset="30x30">30×30</button>
+          <button class="chip" data-preset="40x40">40×40</button>
+        </div>
+
+        <!-- 프리셋 바로 옆 줌 -->
+        <div class="zoomWrap">
+          <div class="signature" aria-hidden="true">By LucyA</div>
+          <div class="group">
+            <span class="label">줌</span>
+            <input id="zoom" type="range" min="80" max="120" step="1" value="100" />
+            <span class="label mono" id="zoomLabel">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="gridBox">
+        <div id="grid" class="grid" role="grid" aria-label="픽셀 그리드"></div>
+      </div>
+
+      <footer>
+        드래그로 칠하기 • <span class="kbd">E</span> 지우개 • <span class="kbd">Alt</span>+클릭 스포이드 •
+        <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> 되돌리기 • 저장은 PNG
+      </footer>
+    </section>
+  </main>
+
+<script>
+(() => {
+  // ===== 상태 =====
+  let gridRows = 25, gridCols = 25;
+  let drawing = false, eraseMode = false;
+  let strokeChanged = false, currentStroke = [];
+  const history = [];
+  let zoomFactor = 1.0;
+  let baseCell = 26;
+  const MAX_SWATCHES = 12;
+  let recentColors = [];
+
+  // ===== 엘리먼트 =====
+  const root   = document.documentElement;
+  const gridBox= document.querySelector('.gridBox');
+  const grid   = document.getElementById('grid');
+
+  const color  = document.getElementById('color');
+  const eraser = document.getElementById('eraser');
+  const eraserState = document.getElementById('eraserState');
+  const clear  = document.getElementById('clear');
+  const save   = document.getElementById('save');
+  const undo   = document.getElementById('undo');
+  const load   = document.getElementById('load');
+  const fileInput = document.getElementById('fileInput');
+
+  const zoom = document.getElementById('zoom');
+  const zoomLabel = document.getElementById('zoomLabel');
+
+  const swatches = document.getElementById('swatches');
+  const addSwatch = document.getElementById('addSwatch');
+
+  // ===== 그리드 구성 =====
+  const makePixel = (i) => {
+    const btn = document.createElement('button');
+    btn.className = 'pixel';
+    btn.type = 'button';
+    btn.setAttribute('role','gridcell');
+    btn.dataset.index = i;
+    btn.dataset.color = '';
+    return btn;
+  };
+
+  const buildGrid = (r = gridRows, c = gridCols) => {
+    grid.replaceChildren();
+    const frag = document.createDocumentFragment();
+    for(let i=0;i<r*c;i++) frag.appendChild(makePixel(i));
+    grid.appendChild(frag);
+    root.style.setProperty('--grid-rows', r);
+    root.style.setProperty('--grid-cols', c);
+    history.length = 0;
+    fitToScreen();
+  };
+
+  function fitToScreen(){
+    const styles = getComputedStyle(grid);
+    const gap = parseFloat(styles.gap) || 0;
+    const availW = gridBox.clientWidth  - (gap * (gridCols - 1)) - 16;
+    const availH = gridBox.clientHeight - (gap * (gridRows - 1)) - 16;
+    const maxCellFromW = Math.floor(availW / gridCols);
+    const maxCellFromH = Math.floor(availH / gridRows);
+    baseCell = Math.max(8, Math.min(maxCellFromW, maxCellFromH));
+    const target = Math.floor(baseCell * zoomFactor);
+    const finalCell = Math.max(8, Math.min(target, baseCell));
+    root.style.setProperty('--cell-size', finalCell + 'px');
+  }
+
+  // ===== 유틸 =====
+  const toHex = (r,g,b) => '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+  const normHex = (h) => h?.toLowerCase();
+
+  const setCellDirect = (idx, hex) => {
+    const el = grid.children[idx];
+    if (!el) return;
+    el.dataset.color = hex || '';
+    el.style.background = hex || '#ffffffee';
+    el.classList.toggle('filled', !!hex);
+  };
+
+  function snapshotFilled(){
+    const filled = [];
+    for (let i=0;i<grid.children.length;i++){
+      const el = grid.children[i];
+      const hex = el.dataset.color;
+      if (hex){
+        const r = Math.floor(i / gridCols);
+        const c = i % gridCols;
+        filled.push({r, c, hex});
+      }
+    }
+    return { rows: gridRows, cols: gridCols, filled };
+  }
+  function applySnapshot(snap, newRows, newCols){
+    const rowOff = Math.floor((newRows - snap.rows)/2);
+    const colOff = Math.floor((newCols - snap.cols)/2);
+    for (const {r, c, hex} of snap.filled){
+      const nr = r + rowOff, nc = c + colOff;
+      if (nr>=0 && nr<newRows && nc>=0 && nc<newCols){
+        setCellDirect(nr*newCols + nc, hex);
+      }
+    }
+  }
+
+  // ===== 최근색 팔레트 =====
+  function renderSwatches(){
+    swatches.replaceChildren();
+    recentColors.forEach(h => {
+      const b = document.createElement('button');
+      b.className = 'swatch';
+      b.style.background = h;
+      b.dataset.color = h;
+      b.dataset.current = String(h === normHex(color.value));
+      b.title = h;
+      b.addEventListener('click', () => {
+        color.value = h;
+        renderSwatches();
+      });
+      swatches.appendChild(b);
+    });
+  }
+  function addRecent(hex){
+    if (!hex) return;
+    hex = normHex(hex);
+    recentColors = [hex, ...recentColors.filter(c => c !== hex)].slice(0, MAX_SWATCHES);
+    renderSwatches();
+  }
+  addSwatch.addEventListener('click', () => addRecent(color.value));
+
+  // 초기 상태: 현재색을 팔레트에 한 번 등록
+  addRecent(color.value);
+
+  // ===== 드로잉 =====
+  const paint = (el, hex, erase=false) => {
+    if (!el || !el.classList.contains('pixel')) return;
+    const prev = el.dataset.color || '';
+    const next = erase ? '' : hex;
+    if (prev === next) return;
+    el.dataset.color = next;
+    el.style.background = next ? next : '#ffffffee';
+    el.classList.toggle('filled', !!next);
+    currentStroke.push({ idx: +el.dataset.index, prev });
+    strokeChanged = true;
+  };
+
+  const startStroke = (target) => { drawing = true; currentStroke = []; strokeChanged = false; paint(target, color.value, eraseMode); };
+  const moveStroke  = (target) => { if (drawing) paint(target, color.value, eraseMode); };
+  const endStroke   = () => {
+    if (drawing && strokeChanged){
+      history.push(currentStroke);
+      if (!eraseMode) addRecent(color.value);
+    }
+    drawing = false; strokeChanged = false; currentStroke = [];
+  };
+
+  // 마우스/터치 + 스포이드(Alt+클릭)
+  grid.addEventListener('mousedown', (e) => {
+    if (!e.target.classList.contains('pixel')) return;
+    if (e.altKey){
+      const pick = e.target.dataset.color;
+      if (pick){
+        color.value = normHex(pick);
+        addRecent(color.value);
+        renderSwatches();
+      }
+      return;
+    }
+    startStroke(e.target);
+  });
+  grid.addEventListener('mouseover', (e) => moveStroke(e.target));
+  window.addEventListener('mouseup', endStroke);
+
+  const touchEl = (t) => document.elementFromPoint(t.clientX, t.clientY);
+  grid.addEventListener('touchstart', (e) => { e.preventDefault(); startStroke(touchEl(e.touches[0])); }, {passive:false});
+  grid.addEventListener('touchmove',  (e) => { e.preventDefault(); moveStroke(touchEl(e.touches[0])); }, {passive:false});
+  window.addEventListener('touchend', endStroke);
+
+  // 키보드
+  grid.addEventListener('keydown', (e) => {
+    if (!e.target.classList.contains('pixel')) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      paint(e.target, color.value, eraseMode);
+      history.push([{ idx:+e.target.dataset.index, prev:'' }]);
+      if (!eraseMode) addRecent(color.value);
+    }
+  });
+
+  // 도구
+  eraser.addEventListener('click', () => {
+    eraseMode = !eraseMode;
+    eraser.dataset.on = String(eraseMode);
+    eraserState.textContent = eraseMode ? 'ON' : 'OFF';
+  });
+
+  // ★ 초기화: 그림 + 히스토리 + 최근색까지 초기화(현재색 1개만 남김)
+  clear.addEventListener('click', () => {
+    grid.querySelectorAll('.pixel').forEach(el => {
+      el.dataset.color=''; el.style.background='#ffffffee'; el.classList.remove('filled');
+    });
+    history.length = 0;
+    recentColors = [];
+    addRecent(color.value);    // 초기 상태처럼 현재색 1개만
+  });
+
+  // 되돌리기
+  undo.addEventListener('click', () => {
+    const stroke = history.pop(); if (!stroke) return;
+    for (const {idx, prev} of stroke) setCellDirect(idx, prev);
+  });
+
+  // 저장
+  save.addEventListener('click', () => {
+    const cx = document.createElement('canvas');
+    const px = 24;
+    cx.width = gridCols * px;
+    cx.height = gridRows * px;
+    const ctx = cx.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    for (let r=0; r<gridRows; r++){
+      for (let c=0; c<gridCols; c++){
+        const el = grid.children[r*gridCols + c];
+        const hex = el?.dataset.color;
+        if (!hex) continue;
+        ctx.fillStyle = hex;
+        ctx.fillRect(c*px, r*px, px, px);
+      }
+    }
+    const a = document.createElement('a');
+    a.href = cx.toDataURL('image/png');
+    a.download = `pixel-${gridCols}x${gridRows}.png`;
+    a.click();
+  });
+
+  // 불러오기
+  load.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const w = img.naturalWidth, h = img.naturalHeight;
+      const cx = document.createElement('canvas');
+      cx.width = w; cx.height = h;
+      const ctx = cx.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0);
+
+      const gcd = (a,b)=>{ while(b){ [a,b]=[b,a%b]; } return a; };
+      let cell = gcd(w,h);
+      if (cell < 2 || cell > 128) { if (w%24===0 && h%24===0) cell = 24; else cell = Math.max(2, Math.floor(Math.min(w,h)/25)); }
+      const cols = Math.max(1, Math.min(60, Math.floor(w / cell)));
+      const rows = Math.max(1, Math.min(60, Math.floor(h / cell)));
+
+      gridCols = cols; gridRows = rows;
+      buildGrid(rows, cols);
+
+      for (let r=0; r<rows; r++){
+        for (let c=0; c<cols; c++){
+          const x = Math.min(w-1, c*cell + Math.floor(cell/2));
+          const y = Math.min(h-1, r*cell + Math.floor(cell/2));
+          const [R,G,B,A] = ctx.getImageData(x, y, 1, 1).data;
+          if (A > 10) setCellDirect(r*cols + c, toHex(R,G,B));
+        }
+      }
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); alert('이미지를 불러오지 못했습니다. PNG 파일인지 확인하세요.'); };
+    img.src = url;
+    fileInput.value = '';
+  });
+
+  // 크기 변경(현재 작업 유지)
+  function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+  function applyGridSize(newC, newR){
+    const snap = snapshotFilled();
+    const cols = clamp(+newC || gridCols, 1, 60);
+    const rows = clamp(+newR || gridRows, 1, 60);
+    gridCols = cols; gridRows = rows;
+    buildGrid(rows, cols);
+    applySnapshot(snap, rows, cols);
+  }
+  document.querySelectorAll('[data-preset]').forEach(chip => chip.addEventListener('click', () => {
+    const [c,r] = chip.dataset.preset.split('x').map(Number);
+    applyGridSize(c, r);
+  }));
+
+  // 줌
+  zoom.addEventListener('input', () => {
+    zoomFactor = (+zoom.value)/100;
+    zoomLabel.textContent = `${zoom.value}%`;
+    fitToScreen();
+  });
+
+  // 단축키
+  window.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'e'){ eraser.click(); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); undo.click(); }
+  });
+
+  // 초기화
+  buildGrid();
+  const ro = new ResizeObserver(() => fitToScreen());
+  ro.observe(gridBox);
+  window.addEventListener('resize', fitToScreen);
+})();
+</script>
+</body>
+</html>
