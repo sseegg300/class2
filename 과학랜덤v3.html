@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>랜덤 과학 분야 룰렛</title>
+<style>
+  :root{
+    --bg:#f3f7ff; --ink:#0a2c4a; --muted:#6b7b8d;
+    --primary:#3b82f6; --success:#22c55e; --accent:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:28px 18px;
+    font-family: "Pretendard","맑은 고딕",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background: radial-gradient(1000px 500px at 80% -40%, #e7f1ff 0, transparent 70%), var(--bg);
+    color:var(--ink);
+  }
+  header{max-width:1100px; margin:0 auto 10px; text-align:center;}
+  h1{margin:0 0 6px; font-size:30px; letter-spacing:-.2px}
+  p.sub{margin:0; color:var(--muted)}
+
+  .wrap{max-width:1100px; margin:0 auto; display:grid; gap:18px;}
+  .section{
+    background:#fff; border:1px solid #e6edf8; border-radius:18px; padding:18px;
+    box-shadow:0 6px 30px rgba(10,44,74,.06);
+  }
+  .section h2{margin:4px 0 10px; font-size:18px; display:flex; gap:8px; align-items:center;}
+  .chip{display:inline-flex; align-items:center; gap:6px; background:#e8f0ff; color:#104a9b;
+        padding:6px 10px; border-radius:999px; font-size:13px; font-weight:800;}
+  .panel{display:grid; grid-template-columns: 380px 1fr; gap:16px; align-items:center;}
+  @media (max-width:900px){ .panel{grid-template-columns:1fr} }
+
+  /* 룰렛 공통 */
+  .wheel-wrap{position:relative; width:360px; aspect-ratio:1/1; margin:6px auto;}
+  .wheel{
+    position:relative; width:100%; height:100%;
+    border-radius:50%; border:10px solid #edf2ff;
+    box-shadow:0 10px 30px rgba(0,0,0,.08) inset, 0 10px 28px rgba(0,0,0,.06);
+    overflow:hidden; transform:rotate(0deg); background:#fff;
+  }
+  .pointer{
+    position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+    width:0; height:0; border-left:14px solid transparent; border-right:14px solid transparent;
+    border-bottom:22px solid var(--accent); filter:drop-shadow(0 2px 3px rgba(0,0,0,.2));
+    z-index:5;
+  }
+
+  /* 라벨(겹침 해결) */
+  .labels{position:absolute; inset:0; pointer-events:none}
+  .labels span{
+    position:absolute; transform: translate(-50%, -50%);
+    font-weight:800; font-size:14px; line-height:1.15;
+    white-space:nowrap; max-width:46%; text-align:center;
+    color:#0b2545; text-shadow:0 1px 0 #fff, 0 0 6px rgba(255,255,255,.6);
+  }
+
+  /* 버튼/결과 */
+  .btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px}
+  button{border:0; cursor:pointer; border-radius:12px; padding:12px 16px; font-weight:800; font-size:15px; transition: filter .12s ease, transform .02s ease;}
+  .btn-primary{background:var(--primary); color:#fff; box-shadow:0 6px 18px rgba(59,130,246,.28)}
+  .btn-ghost{background:#eef4ff; color:#104a9b}
+  button:disabled{filter:grayscale(.6) opacity(.7); cursor:not-allowed}
+  button:active{transform: translateY(1px)}
+  .result{margin-top:10px; padding:12px 14px; border-radius:12px; background:#f0fff3; color:#065f2b; border:1px solid #b7f0c3; font-weight:800}
+  #sec2.disabled{opacity:.6; filter:grayscale(.15)}
+
+  /* 선택 기록 */
+  #history{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+  .badge{
+    display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:999px;
+    background:#eefbf1; color:#075e2d; border:1px solid #bcefcf; font-weight:800; font-size:13px;
+  }
+
+  /* 모달 */
+  .modal{position:fixed; inset:0; display:none; place-items:center; background:rgba(0,14,30,.42); z-index:50}
+  .modal.show{display:grid; animation: fadeIn .15s ease}
+  @keyframes fadeIn{from{opacity:0} to{opacity:1}}
+  .dialog{
+    width:min(560px, 92vw); background:#fff; border-radius:20px; padding:22px; text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+    transform:scale(.9); animation: pop .18s ease forwards;
+  }
+  @keyframes pop{to{transform:scale(1)}}
+  .dialog h3{margin:4px 0 6px; font-size:22px; color:#0a2c4a}
+  .dialog .big{font-size:28px; font-weight:900; margin:6px 0 2px}
+  .dialog .sub{font-size:16px; color:#6b7b8d}
+  .dialog .btns{justify-content:center; margin-top:14px}
+
+  /* 콘페티 */
+  .confetti{position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:60}
+  .confetti span{
+    position:absolute; width:8px; height:14px; opacity:.9;
+    background:hsl(var(--h),90%,60%); top:-20px;
+    transform:translateX(var(--x));
+    animation: fall var(--d) linear forwards;
+  }
+  @keyframes fall{
+    to{ transform: translateX(calc(var(--x) + var(--sx))) translateY(110vh) rotate(720deg); }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>랜덤 과학 분야 룰렛 🎡</h1>
+    <p class="sub">원형 보드를 <b>1단계 → 2단계</b>로 차례대로 돌려 뽑아요. </p>
+  </header>
+
+  <main class="wrap">
+    <!-- 1단계 -->
+    <section class="section" id="sec1">
+      <h2><span class="chip">STEP 1</span> 과학 분야 뽑기</h2>
+      <div class="panel">
+        <div class="wheel-wrap">
+          <div class="pointer"></div>
+          <div id="wheel1" class="wheel"></div>
+        </div>
+        <div>
+          <div class="btns">
+            <button class="btn-primary" id="btnStep1">1단계: 분야 돌리기</button>
+            <button class="btn-ghost" id="btnReset">모두 초기화</button>
+          </div>
+          <div class="result" id="step1Result" style="display:none;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2단계 -->
+    <section class="section disabled" id="sec2">
+      <h2><span class="chip">STEP 2</span> 하위 분야 뽑기</h2>
+      <div class="panel">
+        <div class="wheel-wrap">
+          <div class="pointer"></div>
+          <div id="wheel2" class="wheel"></div>
+        </div>
+        <div>
+          <div class="btns">
+            <button class="btn-primary" id="btnStep2" disabled>2단계: 하위 분야 돌리기</button>
+          </div>
+          <div class="result" id="finalResult" style="display:none;"></div>
+          <div id="history"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 모달: 최종 선택 표시 -->
+  <div class="modal" id="modal">
+    <div class="dialog">
+      <h3>최종 선택 완료 🎉</h3>
+      <div class="big" id="modalMain"></div>
+      <div class="sub" id="modalSub"></div>
+      <div class="btns">
+        <button class="btn-primary" id="btnConfirm">확정(기록 저장)</button>
+        <button class="btn-ghost" id="btnCopy">결과 복사</button>
+        <button class="btn-ghost" id="btnClose">닫기</button>
+      </div>
+    </div>
+  </div>
+  <div class="confetti" id="confetti"></div>
+
+<script>
+/* ---------------- 데이터 ---------------- */
+const DATA = {
+  "생물학": ["동물학","식물학","인체생리학","생태학"],
+  "지구과학": ["기상학","지질학","천문학","해양학"],
+  "물리학": ["역학","전기와 자기","소리와 빛","에너지와 열"],
+  "화학": ["원소와 주기율표","화학반응","물질의 상태","혼합물과 용액"],
+  "환경 과학": ["기후변화","자원관리","오염","환경보호"],
+  "기술과 공학": ["로봇공학","코딩·컴퓨터과학","에너지공학"]
+};
+const FIELD_NAMES = Object.keys(DATA);
+
+/* ---------------- 오디오 ---------------- */
+const audio = new (window.AudioContext || window.webkitAudioContext)();
+function tickSound(){
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = "square"; o.frequency.value = 900 + Math.random()*150;
+  g.gain.value = 0.0001; o.connect(g); g.connect(audio.destination);
+  o.start(); g.gain.exponentialRampToValueAtTime(0.3, audio.currentTime + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.05);
+  o.stop(audio.currentTime + 0.06);
+}
+function winSound(){
+  [880, 660, 990].forEach((f, i)=>{
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type="sine"; o.frequency.value=f; g.gain.value=0.0001;
+    o.connect(g); g.connect(audio.destination);
+    const t = audio.currentTime + i*0.09;
+    o.start(t); g.gain.exponentialRampToValueAtTime(0.25, t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.18); o.stop(t+0.2);
+  });
+}
+
+/* ---------------- 콘페티 ---------------- */
+function confettiBurst(count=70){
+  const box = document.getElementById("confetti");
+  box.innerHTML="";
+  const W = window.innerWidth;
+  for(let i=0;i<count;i++){
+    const s=document.createElement("span");
+    const x = Math.random()*W + "px";
+    const sx = (Math.random()*160-80) + "px";
+    const d = (2 + Math.random()*2.2) + "s";
+    const h = Math.floor(Math.random()*360);
+    s.style.setProperty("--x", x);
+    s.style.setProperty("--sx", sx);
+    s.style.setProperty("--d", d);
+    s.style.setProperty("--h", h);
+    box.appendChild(s);
+  }
+  setTimeout(()=>box.innerHTML="", 2600);
+}
+
+/* ---------------- 룰렛 생성 ---------------- */
+function buildWheel(el, items){
+  const colors=["#eaf2ff","#fff7e6","#e9fff3","#fff0f3","#eefcff","#f4f9ff"];
+  const n=items.length, seg=360/n;
+  el.style.background = `conic-gradient(${Array.from({length:n},(_,i)=>{
+    const c=colors[i%colors.length]; return `${c} ${i*seg}deg ${(i+1)*seg}deg`;
+  }).join(",")})`;
+
+  // 라벨
+  let labels = el.querySelector(".labels");
+  if(!labels){ labels=document.createElement("div"); labels.className="labels"; el.appendChild(labels); }
+  labels.innerHTML="";
+
+  const W=el.clientWidth, r=W*0.38, font=Math.max(12, Math.min(16, 18-Math.max(0,n-6)));
+  for(let i=0;i<n;i++){
+    const mid=i*seg+seg/2, rad=(mid-90)*Math.PI/180;
+    const x=W/2 + r*Math.cos(rad), y=W/2 + r*Math.sin(rad);
+    const span=document.createElement("span");
+    span.style.left=`${x}px`; span.style.top=`${y}px`; span.style.fontSize=font+"px";
+    span.textContent=items[i]; labels.appendChild(span);
+  }
+
+  // 중앙 캡
+  let cap = el.querySelector(".cap");
+  if(!cap){
+    cap=document.createElement("div"); cap.className="cap";
+    Object.assign(cap.style,{
+      position:"absolute", left:"50%", top:"50%", transform:"translate(-50%,-50%)",
+      width:"90px", height:"90px", borderRadius:"50%", background:"#fff",
+      border:"8px solid #eff3ff", boxShadow:"0 6px 18px rgba(0,0,0,.08) inset"
+    });
+    el.appendChild(cap);
+  }
+}
+
+/* ---------------- 회전 ---------------- */
+function spinWheel(el, count, onEnd){
+  const seg=360/count;
+  let steps=count*3 + Math.floor(Math.random()*count) + count;
+  let angle=getRotation(el);
+  (function step(delay){
+    if(steps<=0){
+      const selectedIndex = ((Math.round((((360 - angle)%360)+ seg/2)/seg) % count) + count) % count;
+      const target = 360 - (selectedIndex*seg + seg/2);
+      el.style.transform = `rotate(${target}deg)`;
+      winSound(); onEnd(selectedIndex); return;
+    }
+    angle = (angle - seg) % 360;
+    el.style.transform = `rotate(${angle}deg)`;
+    tickSound(); steps--; const next=Math.min(200, delay*1.06);
+    setTimeout(()=>step(next), next);
+  })(45);
+}
+function getRotation(el){
+  const st=window.getComputedStyle(el).transform;
+  if(st==="none") return 0;
+  const m=st.match(/matrix\(([-0-9., ]+)\)/); if(!m) return 0;
+  const [a,b]=m[1].split(",").map(Number);
+  const deg=Math.round(Math.atan2(b,a)*(180/Math.PI)); return (deg+360)%360;
+}
+
+/* ---------------- 상태/DOM ---------------- */
+const wheel1=document.getElementById("wheel1");
+const wheel2=document.getElementById("wheel2");
+const btn1=document.getElementById("btnStep1");
+const btn2=document.getElementById("btnStep2");
+const btnReset=document.getElementById("btnReset");
+const step1Result=document.getElementById("step1Result");
+const finalResult=document.getElementById("finalResult");
+const sec2=document.getElementById("sec2");
+const historyBox=document.getElementById("history");
+
+/* 모달 */
+const modal=document.getElementById("modal");
+const modalMain=document.getElementById("modalMain");
+const modalSub=document.getElementById("modalSub");
+const btnConfirm=document.getElementById("btnConfirm");
+const btnCopy=document.getElementById("btnCopy");
+const btnClose=document.getElementById("btnClose");
+
+let chosenField=null, lastSub=null;
+
+/* 초기 렌더 */
+buildWheel(wheel1, FIELD_NAMES);
+
+/* 동작 */
+btn1.addEventListener("click", ()=>{
+  btn1.disabled=true; btn2.disabled=true;
+  step1Result.style.display="none"; finalResult.style.display="none";
+  spinWheel(wheel1, FIELD_NAMES.length, (idx)=>{
+    chosenField = FIELD_NAMES[idx];
+    step1Result.textContent = `선택된 분야: ${chosenField}`;
+    step1Result.style.display="block";
+    buildWheel(wheel2, DATA[chosenField]);
+    sec2.classList.remove("disabled"); btn2.disabled=false;
+  });
+});
+
+btn2.addEventListener("click", ()=>{
+  if(!chosenField) return;
+  btn2.disabled=true;
+  spinWheel(wheel2, DATA[chosenField].length, (idx)=>{
+    lastSub = DATA[chosenField][idx];
+    finalResult.textContent = `최종 선택: ${chosenField} ➜ ${lastSub}`;
+    finalResult.style.display="block";
+    openModal(chosenField, lastSub);  // 모달로 별도 창 표시
+    setTimeout(()=>btn2.disabled=false, 400);
+  });
+});
+
+btnReset.addEventListener("click", ()=>{
+  chosenField=null; lastSub=null;
+  wheel1.style.transform="rotate(0deg)"; wheel2.style.transform="rotate(0deg)";
+  step1Result.style.display="none"; finalResult.style.display="none";
+  btn1.disabled=false; btn2.disabled=true; sec2.classList.add("disabled");
+  buildWheel(wheel1, FIELD_NAMES); wheel2.innerHTML="";
+});
+
+/* 모달 로직 */
+function openModal(field, sub){
+  modalMain.textContent = `${field}`;
+  modalSub.textContent  = `세부 분야: ${sub}`;
+  modal.classList.add("show");
+  confettiBurst();
+}
+function closeModal(){ modal.classList.remove("show"); }
+
+btnConfirm.addEventListener("click", ()=>{
+  if(!chosenField || !lastSub) return;
+  // 선택 기록에 저장(=효력 발생)
+  const tag=document.createElement("span");
+  tag.className="badge";
+  tag.textContent = `${chosenField} ▶ ${lastSub}`;
+  historyBox.prepend(tag);
+  closeModal();
+});
+
+btnCopy.addEventListener("click", async ()=>{
+  const text = `최종 선택: ${chosenField} ▶ ${lastSub}`;
+  try{ await navigator.clipboard.writeText(text); btnCopy.textContent="복사됨!"; setTimeout(()=>btnCopy.textContent="결과 복사",1200);}catch(e){ alert(text); }
+});
+
+btnClose.addEventListener("click", closeModal);
+window.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
+modal.addEventListener("click", (e)=>{ if(e.target===modal) closeModal(); });
+</script>
+</body>
+</html>
