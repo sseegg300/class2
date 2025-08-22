@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>영어 단어 타자 연습 </title>
+  <style>
+    :root { --bg1:#e9f1ff; --bg2:#f7fbff; --card:rgba(255,255,255,0.9); --ink:#0f172a; --muted:#64748b; --accent:#2563eb; --accent-2:#60a5fa; --good:#16a34a; --bad:#ef4444; --ring:rgba(37,99,235,.25); }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;font-family:ui-sans-serif,"Apple SD Gothic Neo","Noto Sans KR",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;color:var(--ink);
+      background:radial-gradient(1200px 700px at 10% 0%,var(--bg1),transparent 60%),radial-gradient(1000px 600px at 100% 0%,var(--bg2),transparent 60%),linear-gradient(180deg,#f4f8ff,#eef4ff 60%,#eaf2ff)}
+    .wrap{max-width:900px;margin:min(7vh,80px) auto;padding:24px}
+    .card{background:var(--card);border:1px solid #e6eefc;border-radius:20px;box-shadow:0 10px 30px rgba(37,99,235,.08);overflow:hidden;position:relative}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid #eaf0ff;background:linear-gradient(180deg,#fff,#f9fbff)}
+    .title{display:flex;align-items:center;gap:12px}.title h1{font-size:clamp(18px,3vw,24px);margin:0}
+    .pill{font-size:12px;padding:6px 10px;border-radius:999px;background:#e7f0ff;color:#1d4ed8;font-weight:600;letter-spacing:.3px}
+    .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    select,button{appearance:none;border:1px solid #dbe6ff;background:#fff;color:var(--ink);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1;box-shadow:0 1px 0 #eef4ff inset}
+    button{background:linear-gradient(180deg,var(--accent),#1d4ed8);border:1px solid #1e40af;color:#fff;font-weight:700;letter-spacing:.2px;padding:11px 14px;box-shadow:0 6px 14px var(--ring);cursor:pointer;transition:transform .06s ease}
+    button.secondary{background:#fff;color:var(--accent);border-color:#bfdbfe;box-shadow:none;font-weight:600}
+    button:active{transform:translateY(1px)}
+    main{padding:22px;display:grid;gap:18px}
+    .play{display:grid;gap:18px;grid-template-columns:1fr}
+    @media (min-width:780px){.play{grid-template-columns:1.3fr .7fr}}
+    .panel{background:#fff;border:1px solid #e9efff;border-radius:16px;padding:18px}
+    .panel h2{margin:0 0 10px;font-size:16px;color:var(--muted);font-weight:700;letter-spacing:.2px}
+    .wordbox{display:flex;flex-direction:column;gap:14px;align-items:stretch;justify-content:center;min-height:200px;text-align:center;border-radius:14px;padding:22px;background:linear-gradient(180deg,#f9fbff,#f4f8ff);border:1px dashed #dbe6ff}
+    .word{font-size:clamp(26px,6vw,46px);font-weight:800;letter-spacing:1.2px}
+    .word .ok{color:var(--good)}.word .bad{color:var(--bad);text-decoration:underline wavy currentColor 2px;text-underline-offset:6px}.word .rest{color:#9db3d9}.word .extra{color:var(--bad);opacity:.9}
+    .type{display:flex;gap:10px}
+    .type input{flex:1;font-size:18px;padding:14px 14px;border-radius:14px;outline:none;border:1px solid #cfe0ff;background:#fff;transition:border .2s ease,box-shadow .2s ease}
+    .type input:focus{border-color:#93c5fd;box-shadow:0 0 0 4px rgba(147,197,253,.35)}
+    .hint{font-size:12px;color:var(--muted)}
+    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .stat{background:#fff;border:1px solid #e8eeff;border-radius:14px;padding:12px;text-align:center}
+    .stat .k{font-size:12px;color:var(--muted)}.stat .v{font-size:24px;font-weight:800;margin-top:4px}
+    .timer{display:flex;align-items:center;gap:10px}
+    .bar{height:10px;border-radius:999px;background:#e8eeff;overflow:hidden;width:100%}
+    .bar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .2s linear}
+    details.editor{background:#fff;border:1px solid #e9efff;border-radius:14px;padding:12px 14px}
+    details.editor>summary{cursor:pointer;font-weight:700;color:#1d4ed8}
+    textarea{width:100%;min-height:84px;resize:vertical;border:1px solid #dbe6ff;border-radius:10px;padding:10px;font-family:inherit}
+    .footnote{font-size:12px;color:var(--muted)}
+    .overlay{position:absolute;inset:0;display:none;place-items:center;background:rgba(15,23,42,.55);backdrop-filter:blur(2px)}
+    .overlay.show{display:grid;animation:fade .2s ease}
+    .toast{background:#fff;border-radius:20px;border:1px solid #e8eeff;padding:24px 22px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,.18)}
+    .toast h3{margin:0 0 8px;font-size:22px}
+    .toast p{margin:0 0 14px;color:var(--muted)}
+    @keyframes fade{from{opacity:0}to{opacity:1}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <header>
+        <div class="title">
+          <span class="pill">Typing · Python</span>
+          <h1>영어 단어 타자 연습 <small style="font-size:12px;color:var(--muted);font-weight:600">(by lucyA)</small></h1>
+        </div>
+        <div class="controls">
+          <label style="font-size:14px;color:var(--muted)">모드</label>
+          <select id="mode">
+            <option value="practice">연습 (무제한)</option>
+            <option value="test">60초 테스트</option>
+          </select>
+          <button id="startBtn">시작</button>
+          <button id="stopBtn" class="secondary">정지</button>
+          <button id="resetBtn" class="secondary">초기화</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="play">
+          <div class="panel">
+            <h2>지금 단어</h2>
+            <div class="wordbox">
+              <div id="word" class="word" aria-live="polite">준비!</div>
+              <div class="type">
+                <input id="input" type="text" placeholder="단어를 입력하고 Enter ⏎" autocomplete="off" />
+              </div>
+              <div class="hint">정확히 입력 후 <b>Enter</b>를 눌러 제출하세요. 대소문자 구분합니다.</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2>진행 & 통계</h2>
+            <div class="timer" style="margin-bottom:12px">
+              <div class="bar"><i id="bar"></i></div>
+              <div id="clock" style="font-variant-numeric:tabular-nums;min-width:46px;text-align:right">60</div>
+            </div>
+
+            <div class="stats">
+              <div class="stat"><div class="k">정확도(%)</div><div id="accuracy" class="v">100</div></div>
+              <div class="stat"><div class="k">WPM</div><div id="wpm" class="v">0</div></div>
+              <div class="stat"><div class="k">정답 수</div><div id="correct" class="v">0</div></div>
+              <div class="stat"><div class="k">총 시도</div><div id="total" class="v">0</div></div>
+            </div>
+
+
+          </div>
+        </section>
+
+        <details class="editor">
+          <summary>🔧 단어 목록 편집 (원하는 단어를 쉼표로 추가) — 적용 시 <b>print</b>, <b>input</b>은 자동 포함</summary>
+          <p class="footnote">예: apple, banana, computer, school</p>
+          <textarea id="customWords" placeholder="여기에 단어를 입력…"></textarea>
+          <div style="display:flex;gap:10px;margin-top:8px">
+            <button id="applyWords" class="secondary">단어 적용</button>
+            <button id="restoreWords" class="secondary">기본 단어로 되돌리기</button>
+          </div>
+        </details>
+
+       
+      </main>
+
+      <!-- 종료 오버레이 -->
+      <div id="timeup" class="overlay" aria-live="assertive">
+        <div class="toast">
+          <h3>⏰ 시간 종료!</h3>
+          <p>60초 테스트가 끝났습니다.</p>
+          <button id="endBtn">종료</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 효과음 (다중 포맷 + 폴백) -->
+  <audio id="correctSound" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg" />
+    <source src="https://cdn.jsdelivr.net/gh/jivoi/awesome-osint/sounds/pop.mp3" type="audio/mpeg" />
+  </audio>
+  <audio id="endSound" preload="auto">
+    <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg" />
+    <source src="https://cdn.jsdelivr.net/gh/Sv443/BetterDiscordStuff@master/Audio%20Files/ding.mp3" type="audio/mpeg" />
+  </audio>
+
+  <script>
+    const baseWords=['apple','banana','orange','grape','melon','school','teacher','student','class','homework','hello','world','music','movie','game','robot','python','code','data','science','keyboard','mouse','screen','pencil','notebook','bottle','water','earth','cloud','rain','sun','wind','family','friend','happy','smile','color','shape','light','energy'];
+    const pythonWords=['print','input','for','while','if','else','elif','def','return','range','len','list','dict','tuple','float','int','str','True','False'];
+    function unique(a){return Array.from(new Set(a.filter(Boolean).map(s=>String(s).trim())))}
+    let WORDS=unique([...baseWords,...pythonWords]);
+
+    const state={started:false,mode:'practice',duration:60,timeLeft:60,currentWord:'',totalTyped:0,correctWords:0,charactersTyped:0,correctChars:0,startTime:null,timerId:null};
+
+    const inputEl=document.getElementById('input');
+    const wordEl=document.getElementById('word');
+    const startBtn=document.getElementById('startBtn');
+    const stopBtn=document.getElementById('stopBtn');
+    const resetBtn=document.getElementById('resetBtn');
+    const modeSel=document.getElementById('mode');
+    const bar=document.getElementById('bar');
+    const clock=document.getElementById('clock');
+    const acc=document.getElementById('accuracy');
+    const wpm=document.getElementById('wpm');
+    const correct=document.getElementById('correct');
+    const total=document.getElementById('total');
+    const wordCount=document.getElementById('wordCount');
+
+    const customWordsTa=document.getElementById('customWords');
+    const applyWordsBtn=document.getElementById('applyWords');
+    const restoreWordsBtn=document.getElementById('restoreWords');
+
+    const correctSound=document.getElementById('correctSound');
+    const endSound=document.getElementById('endSound');
+    const overlay=document.getElementById('timeup');
+    const endBtn=document.getElementById('endBtn');
+
+    function safeBeep(freq=880,ms=200){try{const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;const ctx=new Ctx();const osc=ctx.createOscillator();const gain=ctx.createGain();osc.type='sine';osc.frequency.value=freq;gain.gain.value=0.06;osc.connect(gain);gain.connect(ctx.destination);osc.start();setTimeout(()=>{osc.stop();ctx.close()},ms)}catch(e){}}
+    function safePlay(el){if(!el)return;try{el.currentTime=0;const p=el.play();if(p&&p.catch)p.catch(()=>safeBeep())}catch(e){safeBeep()}}
+
+    function escapeHTML(str=''){return String(str).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#039;'}[m]))}
+    function pick(){return WORDS[Math.floor(Math.random()*WORDS.length)]}
+    function nextWord(){let w;do{w=pick()}while(w===state.currentWord&&WORDS.length>1);state.currentWord=w;renderComparison()}
+    function renderComparison(){const target=String(state.currentWord);const typed=String(inputEl.value||'');let out='';const L=Math.max(target.length,typed.length);for(let i=0;i<L;i++){const t=target[i]||'';const k=typed[i]||'';if(i<typed.length){if(k===(t||''))out+=`<span class="ok">${escapeHTML(t)}</span>`;else if(t)out+=`<span class="bad">${escapeHTML(t)}</span>`;else out+=`<span class="extra">${escapeHTML(k)}</span>`}else{out+=`<span class="rest">${escapeHTML(t)}</span>`}}wordEl.innerHTML=out||'준비!'}
+
+    function resetStats(){state.totalTyped=0;state.correctWords=0;state.charactersTyped=0;state.correctChars=0;acc.textContent=100;wpm.textContent=0;correct.textContent=0;total.textContent=0}
+    function updateStats(){const accuracy=state.charactersTyped?Math.round((state.correctChars/state.charactersTyped)*100):100;acc.textContent=isFinite(accuracy)?accuracy:100;const mins=state.startTime?(Date.now()-state.startTime)/60000:0;const wpmVal=mins>0?Math.round((state.correctChars/5)/mins):0;wpm.textContent=isFinite(wpmVal)?wpmVal:0;correct.textContent=state.correctWords;total.textContent=state.totalTyped}
+
+    function submit(){
+      if(!state.started){ start(); }                 // ⬅ 첫 제출 시 자동 시작
+      if(inputEl.disabled) return;
+      if(state.mode==='test'&&state.timeLeft<=0) return;
+      const val=String(inputEl.value).trim();
+      if(val==='') return;
+      const target=String(state.currentWord);
+      state.totalTyped++; state.charactersTyped+=val.length;
+      const L=Math.max(val.length,target.length);
+      for(let i=0;i<L;i++){const a=(val[i]||'');const b=(target[i]||'');if(a===b)state.correctChars++}
+      if(val===target){state.correctWords++;safePlay(correctSound)}
+      inputEl.value=''; nextWord(); updateStats();
+    }
+
+    function timeUp(){
+      stop(); inputEl.blur(); inputEl.disabled=true; overlay.classList.add('show'); safePlay(endSound);
+      if('vibrate' in navigator) navigator.vibrate([100,80,100]);
+      // 종료 상태: 모든 조작 비활성화
+      startBtn.disabled=true; stopBtn.disabled=true; resetBtn.disabled=true; modeSel.disabled=true;
+    }
+
+    function start(){
+      if(state.started) return;
+      state.started=true; inputEl.disabled=false; inputEl.focus(); startBtn.disabled=true; modeSel.disabled=true; overlay.classList.remove('show');
+      if(state.mode==='test'){
+        state.timeLeft=state.duration; clock.textContent=state.timeLeft; bar.style.width='0%'; state.startTime=Date.now();
+        state.timerId=setInterval(()=>{
+          state.timeLeft=Math.max(0,state.timeLeft-1);
+          clock.textContent=state.timeLeft; bar.style.width=((state.duration-state.timeLeft)/state.duration*100).toFixed(2)+'%';
+          updateStats(); if(state.timeLeft<=0){ clearInterval(state.timerId); state.timerId=null; timeUp(); }
+        },1000);
+      }else{
+        state.startTime=Date.now(); state.timerId=setInterval(()=>updateStats(),1000);
+        clock.textContent='∞'; bar.style.width='0%';
+      }
+      if(!state.currentWord) nextWord();
+    }
+
+    function stop(){ startBtn.disabled=false; modeSel.disabled=false; if(state.timerId) clearInterval(state.timerId); state.timerId=null; state.started=false }
+    function reset(){ stop(); resetStats(); state.currentWord=''; renderComparison(); inputEl.value=''; state.timeLeft=state.duration; clock.textContent=state.mode==='test'?state.duration:'∞'; bar.style.width='0%'; inputEl.disabled=false; overlay.classList.remove('show') }
+
+    function ensurePythonRequired(list){const req=['print','input'];const out=unique(list.map(w=>String(w).trim()).filter(Boolean));req.forEach(r=>{if(!out.includes(r))out.push(r)});return out}
+    function applyCustomWords(){const raw=customWordsTa.value.split(',');if(raw.length===1&&raw[0].trim()===''){alert('단어를 입력해 주세요. 쉼표로 구분합니다.');return}WORDS=ensurePythonRequired(unique([...raw]));updateWordCount();reset();nextWord();inputEl.focus()}
+    function restoreWords(){WORDS=unique([...baseWords,...pythonWords]);customWordsTa.value='';updateWordCount();reset();nextWord();inputEl.focus()}
+    function updateWordCount(){wordCount.textContent=WORDS.length}
+
+    // ===== 이벤트 =====
+    inputEl.addEventListener('input',renderComparison);
+    inputEl.addEventListener('keydown',e=>{ if(inputEl.disabled) return; if(e.isComposing) return; if(e.key==='Enter'){ e.preventDefault(); submit(); }});
+    startBtn.addEventListener('click',start);
+    stopBtn.addEventListener('click',stop);
+    resetBtn.addEventListener('click', reset);
+    modeSel.addEventListener('change', ()=>{ state.mode = modeSel.value; reset(); });
+    applyWordsBtn.addEventListener('click', applyCustomWords);
+    restoreWordsBtn.addEventListener('click', restoreWords);
+    endBtn.addEventListener('click', ()=>{ location.reload(); });
+
+    // 초기 상태
+    updateWordCount();
+    clock.textContent = '∞';
+    nextWord();
+    setTimeout(()=>inputEl.focus(), 100);
+  </script>
+</body>
+</html>
