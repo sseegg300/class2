@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>나도 오일러처럼 — 두 도형 한붓그리기</title>
+<style>
+  :root{
+    --bg1:#e6f6ff; --bg2:#eae8ff;
+    --panel:rgba(255,255,255,.9); --panelBorder:rgba(0,0,0,.06);
+    --ink:#0f172a; --muted:#64748b;
+
+    /* 선/점 가시성 강화 */
+    --edge-outline:#ffffff;   /* 바깥 흰 테두리(두껍게) */
+    --edge-core:#dfe7ef;      /* 내부 코어색(밝은 회색) */
+    --edge-visited:#0ea5e9;   /* 방문 오버레이 */
+    --node:#0b2239; --nodeSel:#f59e0b;
+
+    --shadow:0 16px 34px rgba(0,0,0,.18);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:ui-sans-serif,system-ui,Segoe UI,Arial;
+    background:linear-gradient(180deg,var(--bg1),var(--bg2));
+    min-height:100vh; display:flex; align-items:flex-start; justify-content:center; color:var(--ink);
+  }
+  .wrap{width:min(960px,96vw); margin:18px auto;}
+
+  /* 상단바 (2줄) */
+  .superbar{
+    display:grid; grid-template-columns:auto 1fr auto; grid-template-rows:auto auto; gap:10px 12px;
+    align-items:center; padding:12px 14px; background:var(--panel); border:1px solid var(--panelBorder);
+    border-radius:16px; box-shadow:var(--shadow); backdrop-filter:blur(8px);
+  }
+  .tabs{grid-row:1; grid-column:1; display:flex; gap:8px; flex-wrap:wrap}
+  .tab{all:unset; cursor:pointer; padding:8px 12px; border-radius:12px; font-weight:900; border:1px solid var(--panelBorder); background:#fff}
+  .tab.active{ background:#2563eb; color:#fff; border-color:#2563eb; box-shadow:0 8px 18px rgba(37,99,235,.28) }
+  h1{grid-row:1; grid-column:2; margin:0; text-align:center; font-size:clamp(18px,4.2vw,26px); letter-spacing:.16em}
+  .tools{grid-row:1; grid-column:3; display:flex; gap:8px; flex-wrap:wrap}
+  .btn{all:unset; cursor:pointer; padding:10px 14px; border-radius:12px; font-weight:900; color:#fff; background:linear-gradient(180deg,#0ea5e9,#0b84c5); box-shadow:0 10px 24px rgba(0,0,0,.18)}
+  .btn.secondary{background:linear-gradient(180deg,#9ca3af,#6b7280)}
+
+  /* 2번째 줄 오른쪽: 간선 n/m + by lucyA */
+  .meta{grid-row:2; grid-column:3; justify-self:end; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .chip{display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-weight:800; font-size:13px; background:#fff; border:1px solid var(--panelBorder)}
+  .miniProgress{width:140px; height:8px; border-radius:999px; background:#e5e7eb; overflow:hidden}
+  .miniProgress>div{height:100%; width:0%; background:linear-gradient(90deg,#22d3ee,#60a5fa,#a78bfa); transition:width .25s ease}
+  .by{font-weight:900; padding:6px 10px; border-radius:999px; border:1px solid var(--panelBorder); background:#fff}
+
+  /* 카드 & 캔버스 */
+  .card{margin-top:14px; padding:14px; border-radius:22px; background:#fff; border:1px solid var(--panelBorder); box-shadow:var(--shadow)}
+  .progress{height:10px; border-radius:999px; background:#eef2f7; overflow:hidden; border:1px solid var(--panelBorder); margin-bottom:10px}
+  .progress>div{height:100%; width:0%; background:linear-gradient(90deg,#22d3ee,#60a5fa,#a78bfa); transition:width .25s ease}
+  canvas{
+    display:block; width:100%; height:auto; border-radius:16px;
+    background:radial-gradient(900px 600px at 10% 10%, #ffffff 0%, #f6f9ff 40%, transparent 60%),
+               radial-gradient(900px 600px at 90% 90%, #ffffff 0%, #f3f6ff 40%, transparent 60%);
+  }
+  .helper{margin-top:10px; text-align:center; font-weight:700; color:var(--muted)}
+
+  /* 성공 모달 */
+  .overlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(2,6,23,.45); backdrop-filter:blur(6px)}
+  .modal{width:min(420px,92vw); background:#fff; border-radius:20px; padding:24px; text-align:center; box-shadow:0 16px 30px rgba(0,0,0,.28)}
+  .modal h2{margin:0 0 8px}
+  .row{display:flex; gap:10px; justify-content:center}
+
+  /* 에러 흔들기 */
+  .shake{animation:shake .25s linear}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="superbar">
+      <div class="tabs">
+        <button id="tabA" class="tab active">도형 A (두 원 + 곡선)</button>
+        <button id="tabB" class="tab">도형 B (집 모양)</button>
+      </div>
+      <h1>나도 오일러처럼</h1>
+      <div class="tools"><button id="reset" class="btn secondary">초기화</button></div>
+
+      <div class="meta">
+        <span class="chip">간선 <b id="hdrEdges">0</b>/<span id="hdrTotal">0</span>
+          <span class="miniProgress" aria-hidden="true"><div id="hdrBar"></div></span>
+        </span>
+        <span class="by">by&nbsp;lucyA</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="progress" aria-label="진행률"><div id="bar"></div></div>
+      <canvas id="canvas"></canvas>
+      <div id="msg" class="helper">아무 점이나 눌러 시작하세요!</div>
+    </div>
+  </div>
+
+  <!-- 성공 모달 -->
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h2>🎉 성공!</h2>
+      <p>모든 간선을 한 번씩 지났습니다. 멋져요!</p>
+      <div class="row">
+        <button id="retry" class="btn secondary">다시하기</button>
+        <button id="close" class="btn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ===== Elements =====
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', { alpha:true });
+  const msg = document.getElementById('msg');
+  const hdrEdges = document.getElementById('hdrEdges');
+  const hdrTotal = document.getElementById('hdrTotal');
+  const hdrBar = document.getElementById('hdrBar');
+  const bar = document.getElementById('bar');
+  const btnReset = document.getElementById('reset');
+  const tabA = document.getElementById('tabA');
+  const tabB = document.getElementById('tabB');
+  const overlay = document.getElementById('overlay');
+  const btnRetry = document.getElementById('retry');
+  const btnClose = document.getElementById('close');
+
+  // ===== State =====
+  let puzzle = 'A';              // 'A' or 'B'
+  let nodes = [];                // [{x,y}]
+  let edges = [];                // [{a,b,type:'line'|'quad'|'arc', ...params }]
+  let visited = new Set();       // set of edge indices
+  let current = null;            // current node index
+  let edgeIndexByPair = new Map(); // "a-b" -> [indices...]
+
+  // DPR-aware canvas
+  function fitCanvas(){
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const rectW = Math.min(900, document.querySelector('.card').clientWidth - 28);
+    const size = rectW;
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    canvas.width = Math.floor(size * dpr);
+    canvas.height = Math.floor(size * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', () => { fitCanvas(); loadPuzzle(puzzle); });
+
+  // ===== Audio (Web Audio API) =====
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const audio = new AudioCtx();
+  let audioPrimed = false;
+  function primeAudio(){ if(!audioPrimed){ audio.resume && audio.resume(); audioPrimed = true; } }
+  window.addEventListener('pointerdown', primeAudio, {once:true});
+  function beep(freq=440, dur=0.08, type='sine', gain=0.05){
+    const t0 = audio.currentTime;
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = type; o.frequency.value = freq; g.gain.value = gain;
+    o.connect(g).connect(audio.destination); o.start(t0); o.stop(t0 + dur);
+  }
+  const sfxMove = () => { beep(600,0.06,'triangle',0.06); setTimeout(()=>beep(820,0.06,'triangle',0.06),70); };
+  const sfxErr  = () => { beep(240,0.12,'square',0.07);   setTimeout(()=>beep(180,0.14,'square',0.06),70); };
+  const sfxWin  = () => { beep(660,0.12,'sine',0.07); setTimeout(()=>beep(880,0.12,'sine',0.07),120); setTimeout(()=>beep(1040,0.18,'sine',0.07),260); };
+
+  // ===== Helpers =====
+  const key=(a,b)=> a<b ? `${a}-${b}` : `${b}-${a}`;
+  const pairIndices = (a,b)=> edgeIndexByPair.get(key(a,b)) || [];
+
+  // ★ 하드 클리어: 컨텍스트 초기화 + DPR 재적용(잔상/연함 방지)
+  function superClear(){
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const w = canvas.width, h = canvas.height;
+    canvas.width = w; canvas.height = h; // context reset + full clear
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // Add edge helpers
+  const addLine = (a,b)=> edges.push({a,b,type:'line'});
+  const addQuad = (a,b,cp)=> edges.push({a,b,type:'quad', cp});
+  const addArc  = (a,b,arc)=> edges.push({a,b,type:'arc', arc}); // {cx,cy,r,start,end,ccw}
+
+  // ===== Puzzles =====
+  // A: 두 개의 원 + 가운데 직선 + 오른쪽 큰 곡선(상/하)
+  //  → 반원은 모두 180° 경로, ccw:false 고정
+  function buildPuzzleA(){
+    const W = parseFloat(canvas.style.width) || 600;
+    const H = parseFloat(canvas.style.height) || 600;
+
+    const cx = 0.18 * W;
+    const r  = 0.14 * H;
+    const topY = 0.18 * H;
+
+    const A = {x: cx, y: topY};         // 윗원 위
+    const B = {x: cx, y: topY + 2*r};   // 접점(중앙)
+    const C = {x: cx, y: topY + 4*r};   // 아랫원 아래
+    const D = {x: 0.90 * W, y: B.y};    // 오른쪽
+    nodes = [A,B,C,D];
+    edges = [];
+
+    const c1 = {cx:cx, cy:topY + r,   r:r};
+    const c2 = {cx:cx, cy:topY + 3*r, r:r};
+
+    // 윗원 A→B : 오른쪽 반원 / 왼쪽 반원 (각 180°)
+    addArc(0,1,{...c1, start:-Math.PI/2, end: Math.PI/2, ccw:false});
+    addArc(0,1,{...c1, start: Math.PI/2, end:-Math.PI/2, ccw:false});
+
+    // 아랫원 B→C : 오른쪽 반원 / 왼쪽 반원 (각 180°)
+    addArc(1,2,{...c2, start:-Math.PI/2, end: Math.PI/2, ccw:false});
+    addArc(1,2,{...c2, start: Math.PI/2, end:-Math.PI/2, ccw:false});
+
+    // 가운데 직선과 오른쪽 큰 곡선 2개
+    addLine(1,3);
+    addQuad(0,3,{x:0.70*W, y:0.16*H});
+    addQuad(2,3,{x:0.70*W, y:0.84*H});
+  }
+
+  // B: 집 모양 + 대각선
+  function buildPuzzleB(){
+    const W = parseFloat(canvas.style.width) || 600;
+    const H = parseFloat(canvas.style.height) || 600;
+
+    const apex = {x:0.50*W, y:0.14*H};
+    const Ltop = {x:0.20*W, y:0.34*H};
+    const Rtop = {x:0.80*W, y:0.34*H};
+    const Lbot = {x:0.20*W, y:0.86*H};
+    const Rbot = {x:0.80*W, y:0.86*H};
+    nodes = [apex,Ltop,Rtop,Lbot,Rbot];
+
+    edges = [];
+    addLine(0,1); addLine(0,2); addLine(1,2);
+    addLine(1,3); addLine(2,4); addLine(3,4);
+    addLine(1,4); addLine(2,3);
+  }
+
+  // ===== Build & Render =====
+  function bindEdges(){
+    edgeIndexByPair.clear();
+    edges.forEach((e,i)=>{
+      const k = key(e.a,e.b);
+      if(!edgeIndexByPair.has(k)) edgeIndexByPair.set(k, []);
+      edgeIndexByPair.get(k).push(i);
+    });
+  }
+
+  // 고가시성 삼중 스트로크
+  function strokePath(drawFn, color, width, glow=false){
+    ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
+    if(glow){ ctx.shadowColor='rgba(14,165,233,.65)'; ctx.shadowBlur=10; }
+    ctx.strokeStyle=color; ctx.lineWidth=width; ctx.beginPath(); drawFn(); ctx.stroke(); ctx.restore();
+  }
+  function pathForEdge(e){
+    if(e.type==='line'){
+      const A=nodes[e.a], B=nodes[e.b];
+      return () => { ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); };
+    }
+    if(e.type==='quad'){
+      const A=nodes[e.a], B=nodes[e.b], {x,y}=e.cp;
+      return () => { ctx.moveTo(A.x,A.y); ctx.quadraticCurveTo(x,y,B.x,B.y); };
+    }
+    if(e.type==='arc'){
+      const {cx,cy,r,start,end,ccw} = e.arc;
+      // ★ 반드시 시작점으로 moveTo 후 arc → 다른 경로와 연결 방지
+      const sx = cx + r * Math.cos(start);
+      const sy = cy + r * Math.sin(start);
+      return () => { ctx.moveTo(sx,sy); ctx.arc(cx,cy,r,start,end,ccw); };
+    }
+    return () => {};
+  }
+  function drawEdge(e, visitedFlag){
+    const p = pathForEdge(e);
+    strokePath(p, getCss('--edge-outline')||'#fff', 20, false);  // 아웃라인(더 두껍게)
+    strokePath(p, getCss('--edge-core')||'#dfe7ef', 12, false);  // 코어
+    if(visitedFlag) strokePath(p, getCss('--edge-visited')||'#0ea5e9', 14, true); // 방문선(네온)
+  }
+  const getCss = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  function draw(){
+    superClear();                        // ★ 모든 프레임 하드 클리어
+    edges.forEach((e,i)=> drawEdge(e, visited.has(i)));  // 간선
+
+    // 노드(진하게 + 흰테두리)
+    for(let i=0;i<nodes.length;i++){
+      const p = nodes[i];
+      if(i===current){
+        ctx.save(); ctx.shadowColor='rgba(245,158,11,.85)'; ctx.shadowBlur=28;
+        ctx.beginPath(); ctx.arc(p.x,p.y,20,0,Math.PI*2); ctx.fillStyle='rgba(245,158,11,.55)'; ctx.fill(); ctx.restore();
+      }
+      ctx.beginPath(); ctx.arc(p.x,p.y,18,0,Math.PI*2);
+      ctx.fillStyle = (i===current) ? (getCss('--nodeSel')||'#f59e0b') : (getCss('--node')||'#0b2239');
+      ctx.fill();
+      ctx.lineWidth=5; ctx.strokeStyle='#fff'; ctx.stroke();
+    }
+
+    // 진행률
+    const done = visited.size, total = edges.length;
+    const pct = total ? Math.round(done/total*100) : 0;
+    hdrEdges.textContent = done; hdrTotal.textContent = total;
+    hdrBar.style.width = pct + '%'; bar.style.width = pct + '%';
+  }
+
+  // ===== Input =====
+  function getNodeAt(x,y){
+    const r = canvas.getBoundingClientRect();
+    const px = x - r.left, py = y - r.top;
+    for(let i=0;i<nodes.length;i++) if(Math.hypot(nodes[i].x-px, nodes[i].y-py) <= 24) return i;
+    return -1;
+  }
+  function onClick(e){
+    primeAudio();
+    const n = getNodeAt(e.clientX, e.clientY);
+    if(n===-1) return;
+
+    if(current===null){ current=n; msg.textContent='연결된 점으로만 이동하세요.'; draw(); return; }
+
+    const candidates = pairIndices(current,n).filter(i => !visited.has(i));
+    if(candidates.length){
+      visited.add(candidates[0]); current = n; sfxMove(); draw();
+      if(visited.size === edges.length){
+        canvas.removeEventListener('click', onClick);
+        sfxWin(); overlay.style.display='flex'; overlay.setAttribute('aria-hidden','false');
+      }
+    }else{
+      sfxErr();
+      canvas.classList.remove('shake'); void canvas.offsetWidth; canvas.classList.add('shake');
+      msg.textContent='앗! 연결되지 않았거나 이미 지난 길이에요.';
+    }
+  }
+
+  // ===== Flow =====
+  function loadPuzzle(which){
+    puzzle = which;
+    if(which==='A'){ tabA.classList.add('active'); tabB.classList.remove('active'); buildPuzzleA(); }
+    else            { tabB.classList.add('active'); tabA.classList.remove('active'); buildPuzzleB(); }
+
+    bindEdges();
+    visited.clear(); current=null;
+    msg.textContent='아무 점이나 눌러 시작하세요!';
+    draw();                                            // 즉시 1회 리드로우
+    canvas.removeEventListener('click', onClick);
+    canvas.addEventListener('click', onClick);
+  }
+  function reset(){
+    visited.clear(); current=null; msg.textContent='초기화되었습니다. 아무 점이나 눌러 시작하세요!'; draw();
+    canvas.removeEventListener('click', onClick); canvas.addEventListener('click', onClick);
+  }
+
+  // Events
+  btnReset.addEventListener('click', reset);
+  tabA.addEventListener('click', ()=> { fitCanvas(); loadPuzzle('A'); });
+  tabB.addEventListener('click', ()=> { fitCanvas(); loadPuzzle('B'); });
+  btnRetry.addEventListener('click', ()=>{ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); reset(); });
+  btnClose.addEventListener('click', ()=>{ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); });
+
+  // Start
+  fitCanvas();
+  loadPuzzle('A');
+})();
+</script>
+</body>
+</html>
