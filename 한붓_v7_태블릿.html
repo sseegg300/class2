@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>한붓그리기 (Euler Path) - LucyA</title>
+  <style>
+    :root{
+      --bg: #0f1220;
+      --panel: rgba(255,255,255,0.08);
+      --panel2: rgba(255,255,255,0.12);
+      --text: #e9edf5;
+      --muted: #a8b3c7;
+      --accent: #5aa2ff;
+      --accent-2: #4de2b0;
+      --danger: #ff6b6b;
+      --ok: #66e27a;
+      --shadow: 0 8px 24px rgba(0,0,0,.35);
+      --radius: 16px;
+    }
+    *{ box-sizing: border-box; }
+    html, body{ height:100%; }
+    body{
+      margin:0; padding: 12px 12px calc(env(safe-area-inset-bottom,0) + 12px);
+      background: radial-gradient(1200px 900px at 30% -10%, #1a2142 0%, #0f1220 50%, #0b0d1a 100%);
+      color: var(--text);
+      font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+    }
+
+    .wrap{
+      max-width: 920px; margin: 0 auto; display: grid; gap: 12px;
+      grid-template-rows: auto auto auto 1fr;
+    }
+
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between;
+      padding: 10px 14px; border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(6px);
+    }
+    .title{
+      display:flex; flex-direction:column; gap: 4px;
+    }
+    .title h1{
+      margin:0; font-size: 18px; letter-spacing:.2px;
+    }
+    .title .sub{
+      font-size:12px; color: var(--muted);
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius: 999px;
+      background: var(--panel2); color: var(--muted); font-size:12px;
+    }
+    .badge .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); box-shadow: 0 0 14px var(--accent); }
+
+    .stats{
+      display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    }
+    .card{
+      background: var(--panel);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px;
+    }
+    .card h3{ margin:0 0 6px 0; font-size: 14px; color: var(--muted); }
+    .value{ font-size: 18px; font-weight: 700; }
+    .progress{
+      height: 10px; background: rgba(255,255,255,.08);
+      border-radius: 999px; overflow:hidden; margin-top: 6px;
+    }
+    .bar{ height:100%; width:0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .2s ease; }
+
+    .controls{
+      display:flex; gap: 8px; flex-wrap: wrap;
+    }
+    button{
+      border: 0; color: #0b0d1a; font-weight:700; cursor:pointer;
+      padding:10px 14px; border-radius: 999px; transition: transform .05s ease;
+      background: #fff;
+    }
+    button:active{ transform: translateY(1px); }
+    .pill{ background: linear-gradient(180deg, #ffffff, #dfe7ff); }
+    .pill.secondary{ background: linear-gradient(180deg, #d5ffe6, #b9ffd8); color:#0a2b21; }
+    .pill.warn{ background: linear-gradient(180deg, #ffdfe1, #ffb5bb); color:#3a0e13; }
+    .right{ margin-left:auto; }
+
+    .stage{
+      background: radial-gradient(80% 80% at 50% 0%, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 10px;
+    }
+    canvas{
+      display:block;
+      width: 100%;
+      aspect-ratio: 1 / 1;                 /* 항상 정사각형 비율 */
+      max-height: calc(100vh - 260px);     /* 상단 UI 고려 (필요 시 값 조정) */
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+      touch-action: none; /* 터치 스크롤 방지 */
+    }
+
+    /* 승리 오버레이 */
+    .overlay{
+      position: fixed; inset: 0; display:none;
+      align-items:center; justify-content:center;
+      background: rgba(0,0,0,.45); z-index: 10;
+    }
+    .overlay .modal{
+      width: min(92vw, 460px);
+      background: linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,.08));
+      border-radius: 18px; box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .modal h2{ margin: 0 0 8px 0; }
+    .modal p{ margin: 0 0 12px 0; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar card" role="banner">
+      <div class="title">
+        <h1>오일러 한붓그리기 퍼즐</h1>
+        <div class="sub">교차 없이 모든 간선을 한 번씩만 지나 완주해 보세요.</div>
+      </div>
+      <div class="badge" aria-label="signature">
+        <span class="dot" aria-hidden="true"></span>
+        by <strong>LucyA</strong>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="card" aria-live="polite">
+        <h3>레벨</h3>
+        <div class="value" id="levelLabel">1</div>
+      </div>
+      <div class="card">
+        <h3>진행</h3>
+        <div class="value"><span id="visCount">0</span> / <span id="edgeCount">0</span></div>
+        <div class="progress"><div class="bar" id="bar"></div></div>
+      </div>
+      <div class="card">
+        <h3>현재 노드</h3>
+        <div class="value" id="curNodeLabel">-</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="resetBtn" class="pill warn">다시 만들기</button>
+      <button id="sameBtn" class="pill">초기화(같은 퍼즐)</button>
+      <button id="nextBtn" class="pill secondary right">다음 레벨 ▶</button>
+    </div>
+
+    <div class="stage card">
+      <canvas id="board" aria-label="그래프 퍼즐 캔버스"></canvas>
+    </div>
+  </div>
+
+  <!-- 승리 모달 -->
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <div class="modal">
+      <h2 id="winTitle">성공! 🎉</h2>
+      <p>모든 간선을 정확히 한 번씩 지났어요.</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="pill" id="replayBtn">같은 레벨 다시</button>
+        <button class="pill secondary" id="goNextBtn">다음 레벨 ▶</button>
+        <div class="right"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(()=>{
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+
+  // UI
+  const levelLabel = document.getElementById('levelLabel');
+  const visCountEl = document.getElementById('visCount');
+  const edgeCountEl = document.getElementById('edgeCount');
+  const barEl = document.getElementById('bar');
+  const curNodeLabel = document.getElementById('curNodeLabel');
+
+  const overlay = document.getElementById('overlay');
+  const replayBtn = document.getElementById('replayBtn');
+  const goNextBtn = document.getElementById('goNextBtn');
+
+  const resetBtn = document.getElementById('resetBtn');
+  const sameBtn  = document.getElementById('sameBtn');
+  const nextBtn  = document.getElementById('nextBtn');
+
+  // 상태
+  let level = 1;
+  let nodes = [];      // [{x,y}]
+  let edges = [];      // [{a,b, visited:false}]
+  let used = new Set();// key "a-b" with a<b
+  let current = null;  // 현재 정점 index
+  let visitedCount = 0;
+  let nodeR = 10;      // 화면 크기에 따라 동적으로 사용
+  let prevCssSize = null; // 리사이즈 시 스케일 계산용
+
+  // 유틸
+  const key = (a,b)=> a<b ? `${a}-${b}` : `${b}-${a}`;
+  const hasEdge = (a,b)=> used.has(key(a,b));
+  const addEdge = (a,b)=>{ if(a===b || hasEdge(a,b)) return false; used.add(key(a,b)); edges.push({a,b,visited:false}); return true; };
+  const neighbors = (i)=> edges.reduce((arr,e)=>{ if(e.a===i) arr.push([e.b, e]); else if(e.b===i) arr.push([e.a, e]); return arr;}, []);
+
+  function fitCanvas(){
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const rect = canvas.getBoundingClientRect();
+    // 내부 래스터 해상도
+    canvas.width  = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // 노드 크기/선 두께 등 화면 기준 리셋
+    nodeR = Math.max(6, Math.min(14, Math.round(rect.width / 40)));
+  }
+
+  function scaleNodesForResize(){
+    const rect = canvas.getBoundingClientRect();
+    if(prevCssSize == null){ prevCssSize = rect.width; return; }
+    if(prevCssSize <= 0) { prevCssSize = rect.width; return; }
+    const s = rect.width / prevCssSize;
+    if(!isFinite(s) || s <= 0) return;
+    for(let p of nodes){ p.x *= s; p.y *= s; }
+    prevCssSize = rect.width;
+  }
+
+  function placeNodes(n){
+    // 현재 캔버스 CSS 크기 기준으로 원형 배치
+    const rect = canvas.getBoundingClientRect();
+    const cx = rect.width/2, cy = rect.height/2;
+    const r = Math.min(rect.width, rect.height) * 0.40;
+    nodes = [];
+    for(let i=0;i<n;i++){
+      const t = (Math.PI*2) * (i/n) - Math.PI/2; // 위쪽부터 시계방향
+      nodes.push({ x: cx + r*Math.cos(t), y: cy + r*Math.sin(t) });
+    }
+    prevCssSize = rect.width;
+  }
+
+  function makeEulerGraph(n){
+    // 기본 초기화
+    edges = []; used.clear(); current = null; visitedCount = 0;
+
+    // 1) 기본 사이클 연결(모든 정점 차수=2, 연결성 확보)
+    for(let i=0;i<n;i++) addEdge(i, (i+1)%n);
+
+    // 2) 난이도 가중을 위해 chord(현) 추가 (짝수 개수로 추가 → 전체 차수 짝수 유지)
+    const chordPairs = Math.min( Math.floor(n/3), 3 + Math.floor(level/2) );
+    let tries = 0, added=0;
+    while(added < chordPairs*2 && tries < 400){
+      tries++;
+      const a = Math.floor(Math.random()*n);
+      let b = Math.floor(Math.random()*n);
+      if(a===b) continue;
+      if(hasEdge(a,b)) continue;
+      // 너무 이웃(이미 사이클 인접)인 경우 패스하여 겹침 감소
+      if((a+1)%n===b || (b+1)%n===a) continue;
+      if(addEdge(a,b)) added++;
+    }
+
+    // 3) 50% 확률로 Euler "경로"(홀수 2개) 만들기: 임의 간선 하나 더 추가
+    if(Math.random() < 0.5){
+      let count=0;
+      while(count<200){
+        count++;
+        const a = Math.floor(Math.random()*n);
+        let b = Math.floor(Math.random()*n);
+        if(a===b) continue;
+        if(hasEdge(a,b)) continue;
+        if(addEdge(a,b)) break; // 하나만 추가 → a,b 가 홀수 차수
+      }
+    }
+
+    // 갯수 표기
+    edgeCountEl.textContent = String(edges.length);
+    setProgress(0);
+  }
+
+  function setProgress(k){
+    visitedCount = k;
+    visCountEl.textContent = String(visitedCount);
+    const p = edges.length ? Math.round((visitedCount/edges.length)*100) : 0;
+    barEl.style.width = p+"%";
+  }
+
+  function draw(){
+    const rect = canvas.getBoundingClientRect();
+    ctx.clearRect(0,0,rect.width, rect.height);
+
+    // 배경 격자 (은은하게)
+    ctx.save();
+    ctx.globalAlpha = 0.08;
+    ctx.beginPath();
+    const step = Math.max(24, Math.round(rect.width/14));
+    for(let x=step; x<rect.width; x+=step){
+      ctx.moveTo(x, 0); ctx.lineTo(x, rect.height);
+    }
+    for(let y=step; y<rect.height; y+=step){
+      ctx.moveTo(0, y); ctx.lineTo(rect.width, y);
+    }
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+
+    // 간선
+    ctx.lineCap = 'round';
+    for(const e of edges){
+      const a = nodes[e.a], b = nodes[e.b];
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.lineWidth = e.visited ? Math.max(3, nodeR*0.9) : Math.max(2, nodeR*0.7);
+      ctx.strokeStyle = e.visited ? '#5aa2ff' : 'rgba(255,255,255,0.45)';
+      ctx.stroke();
+    }
+
+    // 노드(현재 가능 이웃 강조)
+    let allow = new Set();
+    if(current!=null){
+      for(const [nb, e] of neighbors(current)){
+        if(!e.visited) allow.add(nb);
+      }
+    }
+
+    for(let i=0;i<nodes.length;i++){
+      const p = nodes[i];
+      const isCur = (i===current);
+      const isAllow = allow.has(i);
+      // 외곽 글로우
+      ctx.beginPath();
+      ctx.arc(p.x,p.y, nodeR+6, 0, Math.PI*2);
+      ctx.fillStyle = isCur ? 'rgba(90,162,255,0.25)' : (isAllow ? 'rgba(77,226,176,0.22)' : 'transparent');
+      ctx.fill();
+
+      // 본체
+      ctx.beginPath();
+      ctx.arc(p.x,p.y, nodeR, 0, Math.PI*2);
+      ctx.fillStyle = isCur ? '#66e27a' : (isAllow ? '#4de2b0' : '#ffffff');
+      ctx.fill();
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.stroke();
+
+      // 번호
+      ctx.font = `bold ${Math.max(10, nodeR*0.9)}px system-ui, sans-serif`;
+      ctx.fillStyle = isCur ? '#0a2b21' : '#0b0d1a';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(String(i+1), p.x, p.y+0.5);
+    }
+  }
+
+  // 클릭/터치 처리
+  function getPointerPos(evt){
+    const rect = canvas.getBoundingClientRect();
+    let x,y;
+    if(evt.touches && evt.touches.length){
+      x = evt.touches[0].clientX - rect.left;
+      y = evt.touches[0].clientY - rect.top;
+    }else{
+      x = evt.clientX - rect.left;
+      y = evt.clientY - rect.top;
+    }
+    return {x,y};
+  }
+
+  function findNodeAt(x,y){
+    const r = nodeR * 1.4;
+    for(let i=0;i<nodes.length;i++){
+      const p = nodes[i];
+      const dx=x-p.x, dy=y-p.y;
+      if(dx*dx + dy*dy <= r*r) return i;
+    }
+    return -1;
+  }
+
+  function tryMove(to){
+    if(current===null){
+      current = to;
+      curNodeLabel.textContent = String(current+1);
+      draw();
+      return;
+    }
+    if(current===to) return; // 동일 노드 무시
+
+    // current - to 간 미사용 간선이 있는가?
+    let found = null;
+    for(const e of edges){
+      if(e.visited) continue;
+      if( (e.a===current && e.b===to) || (e.b===current && e.a===to) ){ found = e; break; }
+    }
+    if(!found){
+      // 잘못된 이동 → 가볍게 흔들 효과
+      shake(canvas.parentElement);
+      return;
+    }
+
+    // 사용 처리
+    found.visited = true;
+    setProgress(visitedCount+1);
+
+    // 위치 이동
+    current = to;
+    curNodeLabel.textContent = String(current+1);
+    draw();
+
+    // 완료 체크
+    if(visitedCount === edges.length){
+      setTimeout(()=>{
+        overlay.style.display='flex';
+      }, 120);
+    }
+  }
+
+  function shake(el){
+    el.style.transition='transform .08s ease';
+    el.style.transform='translateX(-5px)';
+    setTimeout(()=>{ el.style.transform='translateX(5px)'; }, 90);
+    setTimeout(()=>{ el.style.transform='translateX(0)'; el.style.transition=''; }, 180);
+  }
+
+  function onPointer(evt){
+    evt.preventDefault();
+    const {x,y} = getPointerPos(evt);
+    const i = findNodeAt(x,y);
+    if(i>=0) tryMove(i);
+  }
+
+  canvas.addEventListener('pointerdown', onPointer, {passive:false});
+  canvas.addEventListener('click', onPointer, {passive:false});
+
+  // 리사이즈: 퍼즐 재생성 없이 좌표만 비례 스케일 + 다시 그리기
+  window.addEventListener('resize', ()=>{
+    scaleNodesForResize();
+    fitCanvas();
+    draw();
+  });
+
+  // 컨트롤
+  resetBtn.addEventListener('click', ()=>{
+    build(level); // 새 퍼즐 생성
+  });
+  sameBtn.addEventListener('click', ()=>{
+    // 같은 퍼즐 초기화(간선 방문만 초기화)
+    for(const e of edges) e.visited=false;
+    setProgress(0);
+    current = null;
+    curNodeLabel.textContent = '-';
+    draw();
+  });
+  nextBtn.addEventListener('click', ()=>{
+    level++; build(level);
+  });
+
+  replayBtn.addEventListener('click', ()=>{
+    overlay.style.display='none';
+    build(level);
+  });
+  goNextBtn.addEventListener('click', ()=>{
+    overlay.style.display='none';
+    level++; build(level);
+  });
+
+  // 메인 빌드
+  function build(lv){
+    const n = Math.max(6, Math.min(14, 6 + Math.floor((lv-1)%9))); // 6~14개 사이 변동
+    levelLabel.textContent = String(lv);
+
+    // 캔버스 준비(먼저)
+    fitCanvas();
+    // 노드 배치 후 그래프 생성
+    placeNodes(n);
+    makeEulerGraph(n);
+
+    current = null;
+    curNodeLabel.textContent = '-';
+    draw();
+  }
+
+  // 초기 시작
+  build(level);
+
+})();</script>
+</body>
+</html>
