@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>나도 오일러처럼 — 두 도형 한붓그리기</title>
+<style>
+  :root{
+    --bg1:#e6f6ff; --bg2:#eae8ff;
+    --panel:rgba(255,255,255,.9); --panelBorder:rgba(0,0,0,.06);
+    --ink:#0f172a; --muted:#64748b;
+    --edge-outline:#ffffff; --edge-core:#dfe7ef; --edge-visited:#0ea5e9;
+    --node:#0b2239; --nodeSel:#f59e0b;
+    --shadow:0 16px 34px rgba(0,0,0,.18);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font-family:ui-sans-serif,system-ui,Segoe UI,Arial;
+    background:linear-gradient(180deg,var(--bg1),var(--bg2));
+    min-height:100vh; display:flex; align-items:flex-start; justify-content:center; color:var(--ink);
+    overscroll-behavior:none; -webkit-touch-callout:none;
+  }
+  .wrap{width:min(1100px,100vw); margin:18px auto; padding-bottom:env(safe-area-inset-bottom)}
+  .superbar{
+    display:grid; grid-template-columns:auto 1fr auto; grid-template-rows:auto auto; gap:10px 12px;
+    align-items:center; padding:12px 14px; background:var(--panel); border:1px solid var(--panelBorder);
+    border-radius:16px; box-shadow:var(--shadow); backdrop-filter:blur(8px);
+  }
+  .tabs{grid-row:1; grid-column:1; display:flex; gap:8px; flex-wrap:wrap}
+  .tab{all:unset; cursor:pointer; padding:10px 14px; border-radius:14px; font-weight:900; border:1px solid var(--panelBorder); background:#fff}
+  .tab.active{ background:#2563eb; color:#fff; border-color:#2563eb; box-shadow:0 8px 18px rgba(37,99,235,.28) }
+  h1{grid-row:1; grid-column:2; margin:0; text-align:center; font-size:clamp(18px,4.2vw,28px); letter-spacing:.16em}
+  .tools{grid-row:1; grid-column:3; display:flex; gap:10px; flex-wrap:wrap}
+  .btn{all:unset; cursor:pointer; padding:12px 16px; border-radius:14px; font-weight:900; color:#fff; background:linear-gradient(180deg,#0ea5e9,#0b84c5); box-shadow:0 10px 24px rgba(0,0,0,.18); -webkit-tap-highlight-color:transparent}
+  .btn.secondary{background:linear-gradient(180deg,#9ca3af,#6b7280)}
+  .meta{grid-row:2; grid-column:3; justify-self:end; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .chip{display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; font-weight:800; font-size:14px; background:#fff; border:1px solid var(--panelBorder)}
+  .miniProgress{width:160px; height:10px; border-radius:999px; background:#e5e7eb; overflow:hidden}
+  .miniProgress>div{height:100%; width:0%; background:linear-gradient(90deg,#22d3ee,#60a5fa,#a78bfa); transition:width .25s ease}
+  .by{font-weight:900; padding:8px 12px; border-radius:999px; border:1px solid var(--panelBorder); background:#fff}
+
+  .card{margin-top:14px; padding:14px; border-radius:22px; background:#fff; border:1px solid var(--panelBorder); box-shadow:var(--shadow)}
+  .progress{height:12px; border-radius:999px; background:#eef2f7; overflow:hidden; border:1px solid var(--panelBorder); margin-bottom:12px}
+  .progress>div{height:100%; width:0%; background:linear-gradient(90deg,#22d3ee,#60a5fa,#a78bfa); transition:width .25s ease}
+
+  canvas{
+    display:block; width:100%; height:auto; border-radius:16px;
+    background:radial-gradient(900px 600px at 10% 10%, #ffffff 0%, #f6f9ff 40%, transparent 60%),
+               radial-gradient(900px 600px at 90% 90%, #ffffff 0%, #f3f6ff 40%, transparent 60%);
+    touch-action:none; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent;
+  }
+  .helper{margin-top:12px; text-align:center; font-weight:800; color:var(--muted); font-size:15px}
+
+  .overlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(2,6,23,.45); backdrop-filter:blur(6px)}
+  .modal{width:min(520px,92vw); background:#fff; border-radius:22px; padding:26px; text-align:center; box-shadow:0 16px 30px rgba(0,0,0,.28)}
+  .modal h2{margin:0 0 12px}
+  .row{display:flex; gap:12px; justify-content:center; flex-wrap:wrap}
+
+  .shake{animation:shake .25s linear}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+  @media (pointer: coarse) {.tab,.btn{padding:14px 18px} .chip{font-size:15px} .miniProgress{height:12px; width:180px}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="superbar">
+      <div class="tabs">
+        <button id="tabA" class="tab active">도형 A (두 원 + 곡선)</button>
+        <button id="tabB" class="tab">도형 B (집 모양)</button>
+      </div>
+      <h1>나도 오일러처럼</h1>
+      <div class="tools"><button id="reset" class="btn secondary">초기화</button></div>
+
+      <div class="meta">
+        <span class="chip">간선 <b id="hdrEdges">0</b>/<span id="hdrTotal">0</span>
+          <span class="miniProgress" aria-hidden="true"><div id="hdrBar"></div></span>
+        </span>
+        <span class="by">by&nbsp;lucyA</span>
+      </div>
+    </div>
+
+    <div class="card" id="card">
+      <div class="progress" aria-label="진행률"><div id="bar"></div></div>
+      <canvas id="canvas"></canvas>
+      <div id="msg" class="helper">점(노드)을 탭해 이동하세요. (태블릿 지원)</div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h2>🎉 성공!</h2>
+      <p>모든 간선을 한 번씩 지났습니다.</p>
+      <div class="row">
+        <button id="retry" class="btn secondary">다시하기</button>
+        <!-- 변경: 라벨만 'PNG 저장'으로 교체 -->
+        <button id="savePng" class="btn">PNG 저장</button>
+        <button id="close" class="btn">닫기</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ===== DOM refs =====
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', { alpha:true });
+  const wrap = document.querySelector('.wrap');
+  const superbar = document.querySelector('.superbar');
+  const cardEl = document.getElementById('card');
+  const progressEl = document.querySelector('.progress');
+  const msg = document.getElementById('msg');
+  const hdrEdges = document.getElementById('hdrEdges');
+  const hdrTotal = document.getElementById('hdrTotal');
+  const hdrBar = document.getElementById('hdrBar');
+  const bar = document.getElementById('bar');
+  const btnReset = document.getElementById('reset');
+  const tabA = document.getElementById('tabA');
+  const tabB = document.getElementById('tabB');
+  const overlay = document.getElementById('overlay');
+  const btnRetry = document.getElementById('retry');
+  const btnClose = document.getElementById('close');
+  const btnSavePng = document.getElementById('savePng');
+
+  // ===== State =====
+  let puzzle = 'A';
+  let nodes = [];
+  let edges = [];
+  let visited = new Set();
+  let current = null;
+  let edgeIndexByPair = new Map();
+
+  // 스타일(크기 비례)
+  const STYLE = { outline:20, core:12, visited:14, nodeR:18, nodeGlowR:20, hit:26 };
+  function applyScale(sizePx){
+    const S = Math.max(0.7, Math.min(1.8, sizePx/600)); // 600 기준 스케일
+    STYLE.outline = Math.round(20*S);
+    STYLE.core    = Math.round(12*S);
+    STYLE.visited = Math.round(14*S);
+    STYLE.nodeR   = Math.round(18*S);
+    STYLE.nodeGlowR = Math.round(20*S);
+    const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const baseHit = coarse ? 30 : 24;
+    STYLE.hit     = Math.round(baseHit*S);
+  }
+
+  // DPR-aware + 가용 높이/폭 기반 정사각
+  function fitCanvas(){
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+    // 카드 내부 가용 폭
+    const cs = getComputedStyle(cardEl);
+    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const availW = cardEl.clientWidth - padX;
+
+    // 화면 가용 높이(상단바/카드 내부 요소/여백 제외)
+    const msgH = msg.offsetHeight || 0;
+    const progH = progressEl.offsetHeight || 0;
+    const topH = superbar.offsetHeight || 0;
+    const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const margin = 32; // 여유 여백
+    let availH = window.innerHeight - topH - progH - msgH - padY - margin;
+    // 안전장치
+    if (isNaN(availH) || availH < 200) availH = availW;
+
+    const sizeCss = Math.max(300, Math.min(availW, availH)); // 최소 300px
+    applyScale(sizeCss);
+
+    // CSS 크기와 실제 캔버스 픽셀 크기 설정
+    canvas.style.width = sizeCss + 'px';
+    canvas.style.height = sizeCss + 'px';
+    canvas.width = Math.floor(sizeCss * dpr);
+    canvas.height = Math.floor(sizeCss * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', () => { fitCanvas(); loadPuzzle(puzzle); });
+  window.addEventListener('orientationchange', () => { setTimeout(()=>{ fitCanvas(); loadPuzzle(puzzle); }, 150); });
+
+  // ===== Audio =====
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const audio = new AudioCtx();
+  let audioPrimed = false;
+  const primeAudio = ()=>{ if(!audioPrimed){ audio.resume && audio.resume(); audioPrimed = true; } };
+  window.addEventListener('pointerdown', primeAudio, {once:true});
+  const beep=(f=440,d=0.08,t='sine',g=0.05)=>{ const t0=audio.currentTime; const o=audio.createOscillator(), G=audio.createGain(); o.type=t; o.frequency.value=f; G.gain.value=g; o.connect(G).connect(audio.destination); o.start(t0); o.stop(t0+d); };
+  const sfxMove=()=>{ beep(600,0.06,'triangle',0.06); setTimeout(()=>beep(820,0.06,'triangle',0.06),70); };
+  const sfxErr =()=>{ beep(240,0.12,'square',0.07); setTimeout(()=>beep(180,0.14,'square',0.06),70); };
+  const sfxWin =()=>{ beep(660,0.12,'sine',0.07); setTimeout(()=>beep(880,0.12,'sine',0.07),120); setTimeout(()=>beep(1040,0.18,'sine',0.07),260); };
+
+  // ===== Helpers =====
+  const key=(a,b)=> a<b ? `${a}-${b}` : `${b}-${a}`;
+  const pairIndices=(a,b)=> edgeIndexByPair.get(key(a,b)) || [];
+  function superClear(){ // 하드 클리어
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const w = canvas.width, h = canvas.height; canvas.width = w; canvas.height = h; ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  const addLine=(a,b)=> edges.push({a,b,type:'line'});
+  const addQuad=(a,b,cp)=> edges.push({a,b,type:'quad', cp});
+  const addArc =(a,b,arc)=> edges.push({a,b,type:'arc', arc});
+
+  // ===== Puzzles =====
+  function buildPuzzleA(){
+    const W = parseFloat(canvas.style.width) || 600;
+    const H = parseFloat(canvas.style.height) || 600;
+    const cx = 0.18 * W, r = 0.14 * H, topY = 0.18 * H;
+    const A = {x:cx, y:topY}, B = {x:cx, y:topY + 2*r}, C = {x:cx, y:topY + 4*r}, D = {x:0.90*W, y:B.y};
+    nodes = [A,B,C,D]; edges = [];
+    const c1={cx:cx, cy:topY + r, r:r}, c2={cx:cx, cy:topY + 3*r, r:r};
+    addArc(0,1,{...c1, start:-Math.PI/2, end: Math.PI/2, ccw:false});
+    addArc(0,1,{...c1, start: Math.PI/2, end:-Math.PI/2, ccw:false});
+    addArc(1,2,{...c2, start:-Math.PI/2, end: Math.PI/2, ccw:false});
+    addArc(1,2,{...c2, start: Math.PI/2, end:-Math.PI/2, ccw:false});
+    addLine(1,3);
+    addQuad(0,3,{x:0.70*W, y:0.16*H});
+    addQuad(2,3,{x:0.70*W, y:0.84*H});
+  }
+  function buildPuzzleB(){
+    const W = parseFloat(canvas.style.width) || 600;
+    const H = parseFloat(canvas.style.height) || 600;
+    const P0={x:0.50*W, y:0.14*H}, P1={x:0.20*W, y:0.34*H}, P2={x:0.80*W, y:0.34*H}, P3={x:0.20*W, y:0.86*H}, P4={x:0.80*W, y:0.86*H};
+    nodes=[P0,P1,P2,P3,P4]; edges=[];
+    addLine(0,1); addLine(0,2); addLine(1,2);
+    addLine(1,3); addLine(2,4); addLine(3,4);
+    addLine(1,4); addLine(2,3);
+  }
+
+  function bindEdges(){
+    edgeIndexByPair.clear();
+    edges.forEach((e,i)=>{ const k=key(e.a,e.b); if(!edgeIndexByPair.has(k)) edgeIndexByPair.set(k, []); edgeIndexByPair.get(k).push(i); });
+  }
+
+  // ===== Rendering =====
+  function strokePath(drawFn, color, width, glow=false){
+    ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
+    if(glow){ ctx.shadowColor='rgba(14,165,233,.65)'; ctx.shadowBlur=10; }
+    ctx.strokeStyle=color; ctx.lineWidth=width; ctx.beginPath(); drawFn(); ctx.stroke(); ctx.restore();
+  }
+  function pathForEdge(e){
+    if(e.type==='line'){ const A=nodes[e.a], B=nodes[e.b]; return ()=>{ ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); }; }
+    if(e.type==='quad'){ const A=nodes[e.a], B=nodes[e.b], {x,y}=e.cp; return ()=>{ ctx.moveTo(A.x,A.y); ctx.quadraticCurveTo(x,y,B.x,B.y); }; }
+    if(e.type==='arc'){ const {cx,cy,r,start,end,ccw}=e.arc; const sx=cx + r*Math.cos(start), sy=cy + r*Math.sin(start); return ()=>{ ctx.moveTo(sx,sy); ctx.arc(cx,cy,r,start,end,ccw); }; }
+    return ()=>{};
+  }
+  function drawEdge(e, visitedFlag){
+    const p = pathForEdge(e);
+    strokePath(p, getCss('--edge-outline')||'#fff', STYLE.outline, false);
+    strokePath(p, getCss('--edge-core')||'#dfe7ef', STYLE.core, false);
+    if(visitedFlag) strokePath(p, getCss('--edge-visited')||'#0ea5e9', STYLE.visited, true);
+  }
+  const getCss = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  function draw(){
+    superClear();
+    edges.forEach((e,i)=> drawEdge(e, visited.has(i)));
+    for(let i=0;i<nodes.length;i++){
+      const p = nodes[i];
+      if(i===current){
+        ctx.save(); ctx.shadowColor='rgba(245,158,11,.85)'; ctx.shadowBlur=28;
+        ctx.beginPath(); ctx.arc(p.x,p.y,STYLE.nodeGlowR,0,Math.PI*2); ctx.fillStyle='rgba(245,158,11,.55)'; ctx.fill(); ctx.restore();
+      }
+      ctx.beginPath(); ctx.arc(p.x,p.y,STYLE.nodeR,0,Math.PI*2);
+      ctx.fillStyle=(i===current)?(getCss('--nodeSel')||'#f59e0b'):(getCss('--node')||'#0b2239');
+      ctx.fill(); ctx.lineWidth=Math.max(4, Math.round(STYLE.nodeR*0.28)); ctx.strokeStyle='#fff'; ctx.stroke();
+    }
+    const done=visited.size,total=edges.length,pct=total?Math.round(done/total*100):0;
+    hdrEdges.textContent=done; hdrTotal.textContent=total; hdrBar.style.width=pct+'%'; bar.style.width=pct+'%';
+  }
+
+  // ===== Input (Pointer) =====
+  function pointToNode(px,py){
+    const r = canvas.getBoundingClientRect();
+    const x = px - r.left, y = py - r.top;
+    for(let i=0;i<nodes.length;i++) if(Math.hypot(nodes[i].x-x, nodes[i].y-y) <= STYLE.hit) return i;
+    return -1;
+  }
+  function onPointerDown(e){
+    e.preventDefault();
+    primeAudio();
+    const n = pointToNode(e.clientX, e.clientY);
+    if(n===-1) return;
+    if(current===null){ current=n; msg.textContent='연결된 점으로만 이동하세요.'; draw(); return; }
+    const candidates = pairIndices(current,n).filter(i => !visited.has(i));
+    if(candidates.length){
+      visited.add(candidates[0]); current=n; sfxMove(); draw();
+      if(visited.size===edges.length){
+        canvas.removeEventListener('pointerdown', onPointerDown);
+        sfxWin(); overlay.style.display='flex'; overlay.setAttribute('aria-hidden','true'); // 보이게
+        overlay.style.display='flex'; overlay.setAttribute('aria-hidden','false');
+      }
+    }else{
+      sfxErr(); canvas.classList.remove('shake'); void canvas.offsetWidth; canvas.classList.add('shake');
+      msg.textContent='앗! 연결되지 않았거나 이미 지난 길이에요.';
+    }
+  }
+
+  // ===== PNG 저장 (공유 제거) =====
+  function canvasToBlob(cnv, cb){
+    if(cnv.toBlob){ cnv.toBlob(cb, 'image/png'); }
+    else{
+      const dataURL=cnv.toDataURL('image/png');
+      const bin=atob(dataURL.split(',')[1]);
+      const arr=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+      cb(new Blob([arr],{type:'image/png'}));
+    }
+  }
+  function savePNG(){
+    const out = document.createElement('canvas'); out.width=canvas.width; out.height=canvas.height;
+    const octx = out.getContext('2d');
+    const g1=octx.createRadialGradient(out.width*0.10,out.height*0.12,0,out.width*0.10,out.height*0.12,out.width*0.55);
+    g1.addColorStop(0,'#ffffff'); g1.addColorStop(1,'#f6f9ff'); octx.fillStyle=g1; octx.fillRect(0,0,out.width,out.height);
+    const g2=octx.createRadialGradient(out.width*0.90,out.height*0.88,0,out.width*0.90,out.height*0.88,out.width*0.55);
+    g2.addColorStop(0,'#ffffff'); g2.addColorStop(1,'#f3f6ff'); octx.fillStyle=g2; octx.globalAlpha=0.9; octx.fillRect(0,0,out.width,out.height); octx.globalAlpha=1;
+
+    octx.drawImage(canvas,0,0);
+    const titleSize=Math.round(out.width*0.06);
+    octx.font=`bold ${titleSize}px system-ui, -apple-system, Segoe UI, Arial`;
+    octx.fillStyle='#0b2239'; octx.textAlign='center'; octx.textBaseline='top';
+    octx.shadowColor='rgba(255,255,255,.8)'; octx.shadowBlur=12;
+    octx.fillText('🎉 성공! 나도 오일러처럼', out.width/2, Math.round(out.height*0.04));
+    octx.shadowBlur=0;
+
+    const small=Math.round(out.width*0.025);
+    octx.font=`900 ${small}px system-ui, -apple-system, Segoe UI, Arial`;
+    octx.textAlign='right'; octx.textBaseline='bottom'; const now=new Date();
+    const ts=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    octx.fillText(`by lucyA · 퍼즐 ${puzzle} · ${ts}`, out.width-24, out.height-20);
+
+    canvasToBlob(out, (blob)=>{
+      const fileName = `nado-euler_success_${puzzle}_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}.png`;
+
+      // 공유 경로 제거: iOS는 새 탭 열기, 그 외는 a.download 저장만
+      const isIOS = /iPad|iPhone|iPod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+      if(isIOS){
+        const url=URL.createObjectURL(blob);
+        const w=window.open(url,'_blank');
+        if(!w) location.href=url;
+        setTimeout(()=>URL.revokeObjectURL(url),60000);
+        return;
+      }
+      const a=document.createElement('a');
+      a.download=fileName;
+      a.href=URL.createObjectURL(blob);
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    });
+  }
+
+  // ===== Flow =====
+  function bindEdges(){ edgeIndexByPair.clear(); edges.forEach((e,i)=>{ const k=key(e.a,e.b); if(!edgeIndexByPair.has(k)) edgeIndexByPair.set(k,[]); edgeIndexByPair.get(k).push(i); }); }
+  function loadPuzzle(which){
+    puzzle = which;
+    if(which==='A'){ tabA.classList.add('active'); tabB.classList.remove('active'); buildPuzzleA(); }
+    else            { tabB.classList.add('active'); tabA.classList.remove('active'); buildPuzzleB(); }
+    bindEdges(); visited.clear(); current=null; msg.textContent='점(노드)을 탭해 이동하세요.'; draw();
+    canvas.removeEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointerdown', onPointerDown, {passive:false});
+  }
+  function reset(){ visited.clear(); current=null; msg.textContent='초기화되었습니다. 아무 점이나 눌러 시작하세요!'; draw();
+    canvas.removeEventListener('pointerdown', onPointerDown); canvas.addEventListener('pointerdown', onPointerDown, {passive:false}); }
+
+  btnReset.addEventListener('click', reset);
+  tabA.addEventListener('click', ()=> { fitCanvas(); loadPuzzle('A'); });
+  tabB.addEventListener('click', ()=> { fitCanvas(); loadPuzzle('B'); });
+  btnRetry.addEventListener('click', ()=>{ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); reset(); });
+  btnClose.addEventListener('click', ()=>{ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); });
+  btnSavePng?.addEventListener('click', savePNG);
+
+  // init
+  fitCanvas();
+  loadPuzzle('A');
+})();
+</script>
+</body>
+</html>
