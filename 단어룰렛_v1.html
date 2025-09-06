@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>두 개 룰렛  – by LucyA</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #ffe6f2;
+    --bg2: #e6f7ff;
+    --glass: rgba(255,255,255,0.6);
+    --ink: #2b2b2b;
+    --accent: #8b5cf6;
+    --accent-2: #f97316;
+    --ok: #10b981;
+  }
+  * { box-sizing: border-box }
+  body {
+    margin: 0; min-height: 100svh;
+    background: radial-gradient(1200px 1200px at 10% 10%, var(--bg1), transparent 60%),
+                radial-gradient(1200px 1200px at 90% 20%, var(--bg2), transparent 60%),
+                linear-gradient(180deg, #fefefe, #f6f8ff);
+    font-family: 'Nunito', system-ui, -apple-system, Segoe UI, Roboto, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    color: var(--ink);
+    display: grid; place-items: center;
+    padding: 24px;
+  }
+  .app {
+    width: min(980px, 100%);
+    background: var(--glass);
+    backdrop-filter: blur(14px) saturate(120%);
+    border: 1px solid rgba(255,255,255,0.7);
+    box-shadow: 0 20px 60px rgba(43,43,43,0.15);
+    border-radius: 28px;
+    padding: 20px 20px 28px;
+    position: relative;
+  }
+  .brand {
+    position: absolute; top: 12px; right: 16px;
+    font-family: 'Jua', cursive; letter-spacing: 0.3px;
+    color: #6d28d9; font-size: 18px; opacity: .9;
+  }
+  header { text-align: center; padding: 8px 8px 16px; }
+  header h1 { margin: 6px 0 4px; font-weight: 800; font-size: clamp(22px, 3.6vw, 34px); }
+  header p { margin: 0; opacity: .75; font-size: 14px; }
+
+  .wheels {
+    display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr));
+    gap: 18px; align-items: start; margin-top: 10px;
+  }
+  .wheel-card {
+    background: white; border-radius: 22px; padding: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.07);
+    position: relative; overflow: hidden;
+  }
+  .wheel-title { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .badge { font-size: 12px; padding: 4px 8px; border-radius: 999px; background: #eef2ff; color: #4338ca; font-weight: 800; }
+  .wheel-title h2 { margin: 0; font-size: 18px; }
+  .wheel-wrap { display: grid; place-items: center; position: relative; padding-top: 4px; }
+  canvas { width: 100%; max-width: 360px; aspect-ratio: 1 / 1; display: block; }
+  .pointer {
+    position: absolute; top: -2px; left: 50%; transform: translate(-50%, 0);
+    width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-bottom: 24px solid var(--accent);
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,.15));
+  }
+  .wheel-card:nth-child(2) .pointer { border-bottom-color: var(--ok); }
+  .wheel-shadow { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 40px rgba(0,0,0,0.08); border-radius: 50%; }
+
+  .controls { display: grid; place-items: center; margin: 16px 0 8px; }
+  .btn {
+    appearance: none; border: 0; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white; font-weight: 900; letter-spacing: .4px; padding: 14px 22px; border-radius: 16px; cursor: pointer;
+    box-shadow: 0 12px 24px rgba(139,92,246,0.35);
+    transition: transform .08s ease, filter .2s ease, box-shadow .2s ease;
+    font-size: 16px;
+  }
+  .btn[disabled] { opacity: .7; cursor: not-allowed; }
+  .btn:hover { filter: brightness(1.05); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 8px 18px rgba(139,92,246,0.3); }
+
+  /* 모달 */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; place-items: center; z-index: 999; }
+  .modal.show { display: grid; }
+  .modal-content {
+    background: #fff; border-radius: 20px; padding: 24px 28px; max-width: 480px; width: calc(100% - 40px);
+    text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,.2); animation: pop .28s ease;
+  }
+  @keyframes pop { from {transform: scale(.8); opacity:0;} to {transform: scale(1); opacity:1;} }
+  .modal h3 { margin: 0 0 12px; font-size: 22px; font-weight: 800; }
+  .modal p { margin: 6px 0; font-size: 16px; }
+  .modal p#modalRes3, .modal p#modalRes4 { font-size: 24px; font-weight: 900; color: #f59e0b; }
+  .modal p#modalCombo { font-size: 30px; font-weight: 900; background: linear-gradient(90deg, #8b5cf6, #ec4899, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-top: 12px; }
+  .close-btn { margin-top: 14px; background: var(--accent); color: #fff; border: none; border-radius: 12px; padding: 10px 18px; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 18px rgba(139,92,246,.25); }
+</style>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="brand">by LucyA</div>
+    <header>
+      <h1>두 개 룰렛 🎡 </h1>
+      <p>버튼을 눌러 두 개의 룰렛을 동시에 돌리고, 오늘의 긍정 조합을 만들어 보세요 ✨</p>
+    </header>
+
+    <section class="wheels">
+      <div class="wheel-card">
+        <div class="wheel-title"><span class="badge">3글자</span></div>
+        <div class="wheel-wrap">
+          <div class="pointer"></div>
+          <canvas id="wheel3" width="540" height="540" aria-label="3글자 룰렛"></canvas>
+          <div class="wheel-shadow" aria-hidden="true"></div>
+        </div>
+      </div>
+      <div class="wheel-card">
+        <div class="wheel-title"><span class="badge">4글자</span></div>
+        <div class="wheel-wrap">
+          <div class="pointer"></div>
+          <canvas id="wheel4" width="540" height="540" aria-label="4글자 룰렛"></canvas>
+          <div class="wheel-shadow" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="controls">
+      <button class="btn" id="spinBtn" type="button">룰렛 돌리기</button>
+        </div>
+  </div>
+
+  <!-- 모달 -->
+  <div class="modal" id="resultModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <h3>🎉 결과 🎉</h3>
+      <p id="modalRes3">3글자: —</p>
+      <p id="modalRes4">4글자: —</p>
+      <p id="modalCombo">긍정 조합 ✨</p>
+      <button class="close-btn" id="closeBtn">닫기</button>
+    </div>
+  </div>
+
+<script>
+// ===== 데이터 =====
+const list3 = [
+  {w:'Joy', m:'기쁨'}, {w:'Fun', m:'즐거움'}, {w:'Win', m:'승리'}, {w:'Sun', m:'태양, 희망'},
+  {w:'Yes', m:'긍정'}, {w:'Zen', m:'평온'}, {w:'Gem', m:'보석, 귀한 존재'}, {w:'Ace', m:'최고, 잘하는 사람'},
+  {w:'Top', m:'정상, 최고의 상태'}, {w:'Fit', m:'건강, 적합함'}, {w:'New', m:'새로움, 신선함'}, {w:'Hot', m:'인기 있는, 멋진'},
+  {w:'Big', m:'위대한, 대단한'}, {w:'Wow', m:'놀라움, 감탄'}, {w:'Pro', m:'전문가, 능숙한 사람'}, {w:'All', m:'모두, 전체 긍정'},
+  {w:'One', m:'하나됨, 단결'}, {w:'Run', m:'활기차게 달리다'}, {w:'Hug', m:'포옹, 따뜻함'}, {w:'Hip', m:'멋진, 세련된'},
+];
+const list4 = [
+  {w:'Love', m:'사랑'}, {w:'Hope', m:'희망'}, {w:'Good', m:'선함, 좋은'}, {w:'Kind', m:'친절한'},
+  {w:'Calm', m:'평온한'}, {w:'Cool', m:'멋진'}, {w:'Cute', m:'귀여운'}, {w:'Glow', m:'빛나다'},
+  {w:'Shine', m:'빛남'}, {w:'Star', m:'별, 빛나는 존재'}, {w:'Luck', m:'행운'}, {w:'Safe', m:'안전한'},
+  {w:'Pure', m:'순수한'}, {w:'Free', m:'자유로운'}, {w:'Play', m:'놀다, 즐기다'}, {w:'Gift', m:'선물'},
+  {w:'Warm', m:'따뜻한'}, {w:'Glad', m:'기쁜'}, {w:'Best', m:'최고의'}, {w:'Hero', m:'영웅'},
+];
+
+// ===== 유틸 =====
+function pastel(i, n, s=65, l=70){ return `hsl(${Math.round(i*360/n)}, ${s}%, ${l}%)`; }
+function resizeForHiDPI(canvas){
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const w = Math.round(rect.width * dpr);
+  const h = Math.round(rect.height * dpr);
+  if(canvas.width !== w || canvas.height !== h){ canvas.width = w; canvas.height = h; }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0); // 스케일 보정
+  return { size: Math.min(rect.width, rect.height) };
+}
+
+function drawWheel(canvas, items, rotation=0){
+  const ctx = canvas.getContext('2d');
+  const { size } = resizeForHiDPI(canvas);
+  const w = size; const r = w/2; ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx.save();
+  ctx.translate(r,r);
+  ctx.rotate(rotation - Math.PI/2); // 포인터가 위쪽을 가리키도록 보정
+
+  const n = items.length; const a = (Math.PI*2)/n;
+  // 바탕 원
+  ctx.beginPath(); ctx.arc(0,0,r*0.98,0,Math.PI*2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.shadowColor = 'rgba(0,0,0,0.12)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
+
+  for(let i=0;i<n;i++){
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r*0.92,i*a,(i+1)*a); ctx.closePath();
+    ctx.fillStyle = pastel(i,n,60,(i%2?82:74)); ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.stroke();
+  }
+
+  // 텍스트
+  ctx.save(); ctx.fillStyle = '#1f2937';
+  for(let i=0;i<n;i++){
+    const mid = (i+0.5)*a; ctx.save(); ctx.rotate(mid); ctx.translate(r*0.62,0); ctx.rotate(Math.PI/2);
+    ctx.textAlign = 'center'; ctx.font = `bold ${Math.max(14, Math.round(r*0.09))}px Nunito`;
+    ctx.fillText(items[i].w, 0, 6); ctx.restore();
+  }
+  ctx.restore();
+
+  // 중심 원
+  ctx.beginPath(); ctx.arc(0,0,r*0.28,0,Math.PI*2);
+  const grad = ctx.createRadialGradient(0,0,0,0,0,r*0.28);
+  grad.addColorStop(0,'#ffffff'); grad.addColorStop(1,'#f1f5f9');
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,0.05)'; ctx.stroke();
+
+  ctx.restore();
+}
+
+function spin({canvas, items, onDone}){
+  const n = items.length; const a = (Math.PI*2)/n;
+  const pick = Math.floor(Math.random()*n);
+  const targetAngle = pick * a + a/2; // 섹터 중앙 각도
+
+  let state = canvas._spinState || {angle: 0};
+  const current = (state.angle % (Math.PI*2) + Math.PI*2)%(Math.PI*2);
+
+  const rounds = 5 + Math.floor(Math.random()*3); // 5~7바퀴
+  const total = rounds*Math.PI*2 + (targetAngle - current);
+  const duration = 2800 + Math.random()*600; // 2.8~3.4s
+
+  let start;
+  cancelAnimationFrame(state.raf);
+
+  function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+
+  function tick(ts){
+    if(start === undefined) start = ts;
+    const t = Math.min(1, (ts - start)/duration);
+    const eased = easeOutCubic(t);
+    const angle = current + total*eased;
+    state.angle = angle;
+    drawWheel(canvas, items, angle);
+    if(t < 1){ state.raf = requestAnimationFrame(tick); }
+    else {
+      canvas._spinState = state;
+      const raw = (((angle%(Math.PI*2))+Math.PI*2)%(Math.PI*2))/a - 0.5; // 포인터 위쪽 기준
+      const index = ((Math.round(raw) % n) + n) % n;
+      onDone(items[index], index);
+      chime();
+    }
+  }
+  state.raf = requestAnimationFrame(tick);
+  canvas._spinState = state;
+}
+
+// ===== 사운드 =====
+let audioCtx;
+function chime(){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.type = 'triangle';
+    const t0 = audioCtx.currentTime;
+    o.frequency.setValueAtTime(880, t0);
+    o.frequency.exponentialRampToValueAtTime(1760, t0 + 0.12);
+    g.gain.setValueAtTime(0.09, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
+    o.start(t0); o.stop(t0 + 0.3);
+  }catch(e){ /* ignore */ }
+}
+
+// ===== 초기 렌더 & 리사이즈 =====
+const wheel3 = document.getElementById('wheel3');
+const wheel4 = document.getElementById('wheel4');
+function renderAll(){ drawWheel(wheel3, list3, wheel3._spinState?.angle || 0); drawWheel(wheel4, list4, wheel4._spinState?.angle || 0); }
+window.addEventListener('load', renderAll);
+let resizeTimer; window.addEventListener('resize', ()=>{ clearTimeout(resizeTimer); resizeTimer = setTimeout(renderAll, 120); });
+
+// ===== 모달 제어 =====
+const modal = document.getElementById('resultModal');
+const modalRes3 = document.getElementById('modalRes3');
+const modalRes4 = document.getElementById('modalRes4');
+const modalCombo = document.getElementById('modalCombo');
+const closeBtn = document.getElementById('closeBtn');
+function openModal(){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; closeBtn.focus({preventScroll:true}); }
+function closeModal(){ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+closeBtn.addEventListener('click', closeModal);
+window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && modal.classList.contains('show')) closeModal(); });
+
+// ===== 버튼 동작 =====
+const btn = document.getElementById('spinBtn');
+btn.addEventListener('click', () => {
+  btn.disabled = true; btn.textContent = '돌아가는 중…';
+  let r3=null, r4=null;
+  function finish(){
+    if(r3 && r4){
+      modalRes3.textContent = `3글자: ${r3.w} (${r3.m})`;
+      modalRes4.textContent = `4글자: ${r4.w} (${r4.m})`;
+      modalCombo.textContent = `${r3.w} + ${r4.w} = 긍정 조합 ✨`;
+      openModal();
+      btn.disabled = false; btn.textContent = '다시 돌리기';
+    }
+  }
+  spin({canvas: wheel3, items: list3, onDone: (item)=>{ r3 = item; finish(); }});
+  spin({canvas: wheel4, items: list4, onDone: (item)=>{ r4 = item; finish(); }});
+});
+</script>
+</body>
+</html>
