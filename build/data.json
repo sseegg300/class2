@@ -1,0 +1,70 @@
+
+[
+  {
+    "id": 1,
+    "name": "김민준",
+    "tagline": "코드로 그리는 미래",
+    "avatar": "https://placehold.co/400x400/A6C1EE/333333?text=MJ",
+    "works": [
+      { "title": "나만의 웹사이트", "description": "HTML과 CSS를 이용해 처음으로 만든 개인 웹사이트입니다.", "image": "https://placehold.co/600x400/A6C1EE/FFFFFF?text=Project+1" },
+      { "title": "파이썬 미니 게임", "description": "파이썬으로 만든 간단한 텍스트 기반 어드벤처 게임입니다.", "image": "https://placehold.co/600x400/A6C1EE/FFFFFF?text=Project+2" }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "이서연",
+    "tagline": "디자인과 기술의 만남",
+    "avatar": "https://placehold.co/400x400/FFD8A8/333333?text=SY",
+    "works": [
+      { "title": "학교 홍보 포스터", "description": "디자인 툴을 사용하여 제작한 학교 축제 홍보 포스터입니다.", "image": "https://placehold.co/600x400/FFD8A8/FFFFFF?text=Project+1" },
+      { "title": "인터랙티브 아트", "description": "JavaScript를 활용한 간단한 인터랙티브 웹 아트입니다.", "image": "https://placehold.co/600x400/FFD8A8/FFFFFF?text=Project+2" }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "박지우",
+    "tagline": "상상을 현실로",
+    "avatar": "https://placehold.co/400x400/B2F2BB/333333?text=JW",
+    "works": [
+      { "title": "3D 모델링", "description": "블렌더를 이용해 만든 첫 3D 캐릭터 모델입니다.", "image": "https://placehold.co/600x400/B2F2BB/FFFFFF?text=Project+1" }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "최유나",
+    "tagline": "이야기를 만드는 작가",
+    "avatar": "https://placehold.co/400x400/F5B2B2/333333?text=YN",
+    "works": [
+      { "title": "단편 소설", "description": "직접 쓴 판타지 단편 소설입니다.", "image": "https://placehold.co/600x400/F5B2B2/FFFFFF?text=Story" }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "정하준",
+    "tagline": "로봇 공학자 지망생",
+    "avatar": "https://placehold.co/400x400/D8B4F8/333333?text=HJ",
+    "works": [
+      { "title": "아두이노 로봇팔", "description": "아두이노 키트를 이용해 만든 움직이는 로봇팔입니다.", "image": "https://placehold.co/600x400/D8B4F8/FFFFFF?text=Robot+Arm" }
+    ]
+  },
+  { "id": 6, "name": "윤채원", "tagline": "음악으로 소통하기", "avatar": "https://placehold.co/400x400/F9E79F/333333?text=CW", "works": [{ "title": "자작곡", "description": "작곡 프로그램으로 만든 짧은 피아노 곡입니다.", "image": "https://placehold.co/600x400/F9E79F/FFFFFF?text=Music" }] },
+  { "id": 7, "name": "임도현", "tagline": "세상을 담는 사진작가", "avatar": "https://placehold.co/400x400/A9DFBF/333333?text=DH", "works": [{ "title": "풍경 사진", "description": "여행 중 찍은 최고의 풍경 사진입니다.", "image": "https://placehold.co/600x400/A9DFBF/FFFFFF?text=Photo" }] },
+  { "id": 8, "name": "한지민", "tagline": "움직이는 그림, 애니메이터", "avatar": "https://placehold.co/400x400/FADBD8/333333?text=JM", "works": [{ "title": "단편 애니메이션", "description": "스톱모션 기법으로 만든 짧은 애니메이션입니다.", "image": "https://placehold.co/600x400/FADBD8/FFFFFF?text=Animation" }] },
+  { "id": 9, "name": "신은우", "tagline": "앱 개발 꿈나무", "avatar": "https://placehold.co/400x400/AEB6BF/333333?text=EW", "works": [{ "title": "날씨 앱 프로토타입", "description": "간단한 날씨 정보 앱의 디자인 프로토타입입니다.", "image": "https://placehold.co/600x400/AEB6BF/FFFFFF?text=App" }] },
+  { "id": 10, "name": "송예진", "tagline": "패션 디자이너", "avatar": "https://placehold.co/400x400/E8DAEF/333333?text=YJ", "works": [{ "title": "의상 스케치", "description": "미래적인 컨셉의 의상 디자인 스케치입니다.", "image": "https://placehold.co/600x400/E8DAEF/FFFFFF?text=Fashion" }] },
+  { "id": 11, "name": "강성민", "tagline": "게임을 만드는 소년", "avatar": "https://placehold.co/400x400/A3E4D7/333333?text=SM", "works": [{ "title": "플랫포머 게임", "description": "간단한 2D 플랫포머 게임을 만들었습니다.", "image": "https://placehold.co/600x400/A3E4D7/FFFFFF?text=Game" }] },
+  { "id": 12, "name": "배수아", "tagline": "웹툰 작가 지망생", "avatar": "https://placehold.co/400x400/F5CBA7/333333?text=SA", "works": [{ "title": "일상툰", "description": "학교 생활을 주제로 한 4컷 만화입니다.", "image": "https://placehold.co/600x400/F5CBA7/FFFFFF?text=Webtoon" }] },
+  { "id": 13, "name": "오건우", "tagline": "하늘을 나는 드론", "avatar": "https://placehold.co/400x400/A9CCE3/333333?text=GW", "works": [{ "title": "드론 항공 촬영", "description": "드론으로 촬영한 우리 동네 전경 영상입니다.", "image": "https://placehold.co/600x400/A9CCE3/FFFFFF?text=Drone" }] },
+  { "id": 14, "name": "문나은", "tagline": "요리로 표현하는 예술", "avatar": "https://placehold.co/400x400/FDEBD0/333333?text=NE", "works": [{ "title": "나만의 레시피", "description": "직접 개발한 특별한 디저트 레시피와 사진입니다.", "image": "https://placehold.co/600x400/FDEBD0/FFFFFF?text=Cooking" }] },
+  { "id": 15, "name": "조서준", "tagline": "역사 탐험가", "avatar": "https://placehold.co/400x400/D5DBDB/333333?text=SJ", "works": [{ "title": "역사 연표", "description": "중요한 역사적 사건들을 정리한 인터랙티브 연표입니다.", "image": "https://placehold.co/600x400/D5DBDB/FFFFFF?text=History" }] },
+  { "id": 16, "name": "황보미", "tagline": "식물학자", "avatar": "https://placehold.co/400x400/D1F2EB/333333?text=BM", "works": [{ "title": "식물 관찰 일지", "description": "키우는 식물의 성장 과정을 담은 관찰 일지입니다.", "image": "https://placehold.co/600x400/D1F2EB/FFFFFF?text=Botany" }] },
+  { "id": 17, "name": "서동현", "tagline": "가상현실 개척자", "avatar": "https://placehold.co/400x400/D6EAF8/333333?text=DH", "works": [{ "title": "VR 공간 디자인", "description": "간단한 VR 공간을 디자인하고 꾸며보았습니다.", "image": "https://placehold.co/600x400/D6EAF8/FFFFFF?text=VR" }] },
+  { "id": 18, "name": "천수현", "tagline": "환경 운동가", "avatar": "https://placehold.co/400x400/F6DDCC/333333?text=SH", "works": [{ "title": "재활용 아트", "description": "재활용품을 이용해 만든 예술 작품입니다.", "image": "https://placehold.co/600x400/F6DDCC/FFFFFF?text=Recycle" }] },
+  { "id": 19, "name": "유시우", "tagline": "별을 보는 천문학자", "avatar": "https://placehold.co/400x400/D4E6F1/333333?text=SW", "works": [{ "title": "별자리 지도", "description": "계절별 별자리를 정리한 디지털 지도입니다.", "image": "https://placehold.co/600x400/D4E6F1/FFFFFF?text=Astro" }] },
+  { "id": 20, "name": "나하윤", "tagline": "목소리로 연기하는 성우", "avatar": "https://placehold.co/400x400/F5EEF8/333333?text=HY", "works": [{ "title": "오디오북 샘플", "description": "동화의 한 장면을 녹음한 오디오북 샘플입니다.", "image": "https://placehold.co/600x400/F5EEF8/FFFFFF?text=Voice" }] },
+  { "id": 21, "name": "하동균", "tagline": "건축학도", "avatar": "https://placehold.co/400x400/D6DBDF/333333?text=DG", "works": [{ "title": "미래의 집", "description": "상상 속 미래의 집을 스케치하고 디자인했습니다.", "image": "https://placehold.co/600x400/D6DBDF/FFFFFF?text=Arch" }] },
+  { "id": 22, "name": "성아라", "tagline": "세상을 번역하는 번역가", "avatar": "https://placehold.co/400x400/EBDEF0/333333?text=AR", "works": [{ "title": "시 번역", "description": "좋아하는 외국 시를 한국어로 번역했습니다.", "image": "https://placehold.co/600x400/EBDEF0/FFFFFF?text=Translate" }] },
+  { "id": 23, "name": "차은성", "tagline": "영화 감독 지망생", "avatar": "https://placehold.co/400x400/E6B0AA/333333?text=ES", "works": [{ "title": "단편 영화 시나리오", "description": "직접 구상한 단편 영화의 시나리오입니다.", "image": "https://placehold.co/600x400/E6B0AA/FFFFFF?text=Movie" }] },
+  { "id": 24, "name": "편지호", "tagline": "데이터 과학자", "avatar": "https://placehold.co/400x400/A2D9CE/333333?text=JH", "works": [{ "title": "날씨 데이터 분석", "description": "공공 날씨 데이터를 분석하여 시각화한 자료입니다.", "image": "https://placehold.co/600x400/A2D9CE/FFFFFF?text=Data" }] },
+  { "id": 25, "name": "홍예나", "tagline": "일러스트레이터", "avatar": "https://placehold.co/400x400/F8C471/333333?text=YN", "works": [{ "title": "디지털 드로잉", "description": "태블릿으로 그린 캐릭터 일러스트입니다.", "image": "https://placehold.co/600x400/F8C471/FFFFFF?text=Illust" }] }
+]
